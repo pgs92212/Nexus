@@ -25,23 +25,29 @@
 
     <style>
         :root {
-            /* Fundo um pouco menos claro (céu mais “fechado”) */
-            --bg-sky: #5f97b3;
-            --bg-sky-2: #78abc5;
+            /* Neo‑Brutalism (alto contraste + sombras offset), mas sem estourar a claridade */
+            --bg-sky: #4f7f98;
+            --bg-sky-2: #6fa2b9;
 
             --ink: #0b1220;
             --ink-soft: rgba(11, 18, 32, 0.74);
 
-            /* Painéis levemente mais escuros para reduzir claridade geral */
-            --panel: rgba(232, 242, 251, 0.50);
-            --panel-strong: rgba(232, 242, 251, 0.62);
+            /* Painéis: claros, porém com menos brilho */
+            --panel: rgba(224, 236, 245, 0.62);
+            --panel-strong: rgba(235, 244, 251, 0.78);
 
-            --border: rgba(11, 18, 32, 0.32);
-            --border-strong: rgba(11, 18, 32, 0.50);
+            /* Bordas mais "brutais" */
+            --border: rgba(11, 18, 32, 0.45);
+            --border-strong: #0b1220;
 
-            --accent: #1d4ed8;      /* indigo/blue */
-            --accent-soft: rgba(29, 78, 216, 0.14);
-            --danger: #b42366;      /* pink mais contido */
+            /* Acentos (brutalista: bloco chapado) */
+            --accent: #3559ff;
+            --accent-soft: rgba(53, 89, 255, 0.16);
+            --accent-2: #ffd000;
+            --danger: #ff2e63;
+
+            --shadow-ink: rgba(11, 18, 32, 0.28);
+            --shadow-ink-strong: rgba(11, 18, 32, 0.38);
 
             --cloud-size: 56px;
 
@@ -61,8 +67,8 @@
             cursor: var(--cursor-arrow) 2 2, auto;
             overflow-x: hidden;
             background:
-                radial-gradient(1200px 600px at 20% 10%, rgba(255,255,255,0.22), rgba(255,255,255,0) 60%),
-                radial-gradient(900px 520px at 80% 35%, rgba(0,0,0,0.12), rgba(0,0,0,0) 60%),
+                radial-gradient(1100px 520px at 18% 12%, rgba(255,255,255,0.14), rgba(255,255,255,0) 60%),
+                radial-gradient(900px 520px at 84% 30%, rgba(0,0,0,0.16), rgba(0,0,0,0) 62%),
                 linear-gradient(180deg, var(--bg-sky-2), var(--bg-sky));
         }
 
@@ -73,10 +79,25 @@
             inset: 0;
             pointer-events: none;
             z-index: 1;
-            /* Um pouco mais de vinheta para “baixar” a claridade */
+            /* um pouco menos de claridade */
             background:
-                radial-gradient(900px 520px at 20% 0%, rgba(0,0,0,0.10), rgba(0,0,0,0.26) 70%),
-                linear-gradient(180deg, rgba(0,0,0,0.10), rgba(0,0,0,0.26));
+                radial-gradient(900px 520px at 20% 0%, rgba(0,0,0,0.16), rgba(0,0,0,0.34) 72%),
+                linear-gradient(180deg, rgba(0,0,0,0.14), rgba(0,0,0,0.36));
+        }
+
+        /* Neo-brutal micro-texture */
+        body::after {
+            content: "";
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 2;
+            opacity: 0.08;
+            background-image:
+                linear-gradient(90deg, rgba(11,18,32,0.22) 1px, transparent 1px),
+                linear-gradient(rgba(11,18,32,0.18) 1px, transparent 1px);
+            background-size: 22px 22px;
+            mix-blend-mode: multiply;
         }
 
         #root {
@@ -115,8 +136,28 @@
             pointer-events: none;
             z-index: 45;
             image-rendering: pixelated;
-            /* menos contraste na sombra */
-            filter: drop-shadow(1px 1px 0 rgba(11,18,32,0.06));
+            /* neo-brutal: contorno mais nítido e sombra offset leve */
+            filter:
+                drop-shadow(2px 2px 0 rgba(11,18,32,0.10))
+                drop-shadow(5px 5px 0 rgba(11,18,32,0.06));
+        }
+
+        /* Small neo-brutal badge helper */
+        .nb-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.15rem 0.45rem;
+            border: 2px solid var(--border-strong);
+            background: rgba(255, 208, 0, 0.92);
+            color: var(--ink);
+            box-shadow: 3px 3px 0 var(--shadow-ink);
+            font-weight: 700;
+        }
+
+        /* Inputs transparentes (ex: busca) com placeholder mais legível */
+        input::placeholder, textarea::placeholder {
+            color: rgba(11,18,32,0.55);
         }
         .cloud-top {
             top: 0; left: 0; right: 0;
@@ -169,49 +210,59 @@
 
         .panel {
             background: var(--panel);
-            border: 2px solid var(--border);
-            box-shadow: 5px 5px 0 rgba(11,18,32,0.10);
+            border: 3px solid var(--border-strong);
+            box-shadow: 8px 8px 0 var(--shadow-ink);
             backdrop-filter: blur(2px);
         }
-        .panel-strong { background: var(--panel-strong); }
+        .panel-strong {
+            background: var(--panel-strong);
+            border-color: var(--border-strong);
+            box-shadow: 10px 10px 0 var(--shadow-ink-strong);
+        }
 
         /* micro-efeitos para “design” mais polido */
         .panel, .btn, .input { transform: translateZ(0); }
 
         .btn {
-            border: 2px solid var(--border-strong);
-            background: rgba(235, 245, 252, 0.88);
+            border: 3px solid var(--border-strong);
+            background: rgba(238, 246, 252, 0.92);
             color: var(--ink);
-            box-shadow: 4px 4px 0 rgba(11,18,32,0.12);
-            transition: transform 80ms ease, background 120ms ease, box-shadow 120ms ease, filter 120ms ease;
+            box-shadow: 6px 6px 0 var(--shadow-ink);
+            transition: transform 90ms ease, background 120ms ease, box-shadow 120ms ease, filter 120ms ease;
             user-select: none;
         }
         .btn:hover {
-            background: rgba(235, 245, 252, 0.96);
-            box-shadow: 5px 5px 0 rgba(11,18,32,0.14);
+            background: rgba(246, 252, 255, 0.96);
+            transform: translate(-1px, -1px);
+            box-shadow: 8px 8px 0 var(--shadow-ink-strong);
         }
         .btn:active {
-            transform: translate(1px, 1px);
-            box-shadow: 3px 3px 0 rgba(11,18,32,0.10);
+            transform: translate(2px, 2px);
+            box-shadow: 4px 4px 0 var(--shadow-ink);
         }
 
         .btn-accent {
             background: var(--accent);
             color: white;
-            border-color: rgba(11,18,32,0.55);
+            border-color: var(--border-strong);
+            box-shadow: 7px 7px 0 var(--shadow-ink-strong);
         }
-        .btn-accent:hover { filter: brightness(1.05); }
+        .btn-accent:hover {
+            filter: brightness(1.03);
+            transform: translate(-1px, -1px);
+            box-shadow: 9px 9px 0 var(--shadow-ink-strong);
+        }
 
         .input {
-            border: 2px solid var(--border);
-            background: rgba(255,255,255,0.85);
+            border: 3px solid var(--border-strong);
+            background: rgba(255,255,255,0.82);
             color: var(--ink);
-            box-shadow: 4px 4px 0 rgba(11,18,32,0.10);
+            box-shadow: 6px 6px 0 var(--shadow-ink);
         }
         .input:focus {
             outline: none;
-            border-color: rgba(29,78,216,0.55);
-            box-shadow: 0 0 0 3px rgba(29,78,216,0.14), 4px 4px 0 rgba(11,18,32,0.10);
+            border-color: var(--accent-2);
+            box-shadow: 0 0 0 4px rgba(255, 208, 0, 0.20), 6px 6px 0 var(--shadow-ink);
         }
 
         @keyframes fade-in {
@@ -219,6 +270,119 @@
             to { opacity: 1; transform: translateY(0); }
         }
         .animate-fade-in { animation: fade-in 0.35s ease-out forwards; }
+
+        /* --- Windows 98 touches (poucas e discretas) --- */
+        :root {
+            --win98-gray: #c0c0c0;
+            --win98-gray-2: #dfdfdf;
+            --win98-blue: #1b4fd9;
+            --win98-blue-2: #123a95;
+        }
+
+        .win98-bevel {
+            border: 2px solid var(--border-strong);
+            box-shadow:
+                inset 2px 2px 0 rgba(255,255,255,0.85),
+                inset -2px -2px 0 rgba(11,18,32,0.22),
+                6px 6px 0 var(--shadow-ink);
+        }
+
+        .win98-titlebar {
+            background: linear-gradient(180deg, var(--win98-blue), var(--win98-blue-2));
+            color: rgba(255,255,255,0.95);
+            border-bottom: 3px solid var(--border-strong);
+        }
+
+        .win98-control {
+            width: 18px;
+            height: 18px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(238, 246, 252, 0.92);
+            border: 2px solid var(--border-strong);
+            box-shadow: 2px 2px 0 var(--shadow-ink);
+            color: var(--ink);
+            line-height: 1;
+            font-size: 14px;
+            padding: 0;
+        }
+        .win98-control:active {
+            transform: translate(1px, 1px);
+            box-shadow: 1px 1px 0 var(--shadow-ink);
+        }
+
+        .taskbar98 {
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: var(--cloud-size);
+            z-index: 44;
+            pointer-events: none;
+        }
+        .taskbar98-inner {
+            height: 44px;
+            background: rgba(223, 223, 223, 0.88);
+            border-top: 3px solid var(--border-strong);
+            border-bottom: 3px solid var(--border-strong);
+            box-shadow: 0 -6px 0 rgba(11,18,32,0.10);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            pointer-events: auto;
+        }
+        .start98-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 10px;
+            background: var(--win98-gray);
+            border: 2px solid var(--border-strong);
+            box-shadow:
+                inset 2px 2px 0 rgba(255,255,255,0.85),
+                inset -2px -2px 0 rgba(11,18,32,0.22),
+                4px 4px 0 var(--shadow-ink);
+            user-select: none;
+        }
+        .start98-btn:active {
+            transform: translate(1px, 1px);
+            box-shadow:
+                inset 2px 2px 0 rgba(255,255,255,0.85),
+                inset -2px -2px 0 rgba(11,18,32,0.22),
+                2px 2px 0 var(--shadow-ink);
+        }
+
+        .start98-menu {
+            position: absolute;
+            left: 0;
+            bottom: 48px;
+            width: min(320px, calc(100vw - (2 * var(--cloud-size)) - 2rem));
+            background: rgba(223, 223, 223, 0.96);
+            padding: 10px;
+        }
+        .start98-item {
+            width: 100%;
+            text-align: left;
+            padding: 10px 10px;
+            border: 2px solid var(--border-strong);
+            background: rgba(238, 246, 252, 0.92);
+            box-shadow: 4px 4px 0 var(--shadow-ink);
+        }
+        .start98-item:hover {
+            background: rgba(255, 255, 255, 0.95);
+            transform: translate(-1px, -1px);
+            box-shadow: 6px 6px 0 var(--shadow-ink-strong);
+        }
+
+        .tray98 {
+            padding: 6px 10px;
+            background: rgba(238, 246, 252, 0.92);
+            border: 2px solid var(--border-strong);
+            box-shadow:
+                inset 2px 2px 0 rgba(255,255,255,0.85),
+                inset -2px -2px 0 rgba(11,18,32,0.22);
+            font-weight: 700;
+        }
     </style>
 </head>
 <body class="antialiased min-h-screen flex flex-col">
@@ -227,6 +391,13 @@
     <div class="cloud-border cloud-bottom" aria-hidden="true"></div>
     <div class="cloud-border cloud-left" aria-hidden="true"></div>
     <div class="cloud-border cloud-right" aria-hidden="true"></div>
+
+    <!-- Windows 98-ish taskbar (discreta) -->
+    <div class="taskbar98 safe-x" aria-hidden="false">
+        <div id="taskbar98" class="taskbar98-inner win98-bevel">
+            <!-- React will hydrate via portal-ish manual render -->
+        </div>
+    </div>
 
     <div id="root"></div>
 
@@ -333,6 +504,73 @@
 
         // --- Components ---
 
+        const Taskbar98 = ({ user, onChangeView, onOpenLogin }) => {
+            const [open, setOpen] = useState(false);
+            const [now, setNow] = useState(() => new Date());
+
+            useEffect(() => {
+                const t = setInterval(() => setNow(new Date()), 1000);
+                return () => clearInterval(t);
+            }, []);
+
+            useEffect(() => {
+                const onDoc = (e) => {
+                    if (!open) return;
+                    const el = document.getElementById('start98-area');
+                    if (el && !el.contains(e.target)) setOpen(false);
+                };
+                document.addEventListener('mousedown', onDoc);
+                return () => document.removeEventListener('mousedown', onDoc);
+            }, [open]);
+
+            const hh = String(now.getHours()).padStart(2, '0');
+            const mm = String(now.getMinutes()).padStart(2, '0');
+
+            return (
+                <div className="w-full flex items-center justify-between">
+                    <div className="flex items-center gap-2 relative" id="start98-area">
+                        <button
+                            className="start98-btn"
+                            onClick={() => setOpen(v => !v)}
+                            title="Start"
+                        >
+                            <span className="font-pixel text-[10px]">START</span>
+                            <span className="text-lg leading-none">▾</span>
+                        </button>
+
+                        {open && (
+                            <div className="start98-menu win98-bevel animate-fade-in">
+                                <div className="font-pixel text-[10px] text-[var(--ink)] mb-2">NEXUSHUB 98</div>
+                                <div className="space-y-2">
+                                    <button className="start98-item" onClick={() => { setOpen(false); onChangeView('home'); }}>
+                                        Abrir vitrine
+                                    </button>
+                                    <button className="start98-item" onClick={() => { setOpen(false); user ? onChangeView('dashboard') : onOpenLogin(); }}>
+                                        Publicar jogo…
+                                    </button>
+                                    {user ? (
+                                        <button className="start98-item" onClick={() => { setOpen(false); onChangeView('logout'); }}>
+                                            Sair ({user.name})
+                                        </button>
+                                    ) : (
+                                        <button className="start98-item" onClick={() => { setOpen(false); onOpenLogin(); }}>
+                                            Entrar…
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        <div className="tray98">
+                            <span className="font-pixel text-[10px]">{hh}:{mm}</span>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
         const AuthModal = ({ isOpen, onClose, onLogin }) => {
             const [email, setEmail] = useState('');
             const [password, setPassword] = useState('');
@@ -358,11 +596,20 @@
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
                     <div className="absolute inset-0 bg-black/25" onClick={onClose}></div>
 
-                    <div className="relative w-full max-w-md panel panel-strong p-7 animate-fade-in">
-                        <div className="mb-5">
-                            <h2 className="font-pixel text-[var(--ink)] text-sm md:text-base mb-2">ACESSAR A NEXUSHUB</h2>
-                            <p className="text-[var(--ink-soft)] text-lg">Entre para publicar jogos, curtir e comentar.</p>
+                    <div className="relative w-full max-w-md panel panel-strong p-0 overflow-hidden animate-fade-in">
+                        <div className="win98-titlebar px-3 py-2 flex items-center justify-between">
+                            <div className="font-pixel text-[10px]">Login — NexusHub</div>
+                            <div className="flex items-center gap-2">
+                                <button className="win98-control" type="button" title="Minimizar" onClick={onClose}>_</button>
+                                <button className="win98-control" type="button" title="Fechar" onClick={onClose}>×</button>
+                            </div>
                         </div>
+
+                        <div className="p-7">
+                            <div className="mb-5">
+                                <h2 className="font-pixel text-[var(--ink)] text-sm md:text-base mb-2">ACESSAR A NEXUSHUB</h2>
+                                <p className="text-[var(--ink-soft)] text-lg">Entre para publicar jogos, curtir e comentar.</p>
+                            </div>
 
                         <form className="space-y-3" onSubmit={submitEmail}>
                             <input
@@ -399,6 +646,7 @@
                         )}
 
                         <button className="mt-5 text-[var(--ink-soft)] underline" onClick={onClose} disabled={busy}>Cancelar</button>
+                        </div>
                     </div>
                 </div>
             );
@@ -553,7 +801,7 @@
                             <div className="panel p-5 h-full max-h-[640px] flex flex-col">
                                 <div className="flex items-center justify-between border-b-2 border-[var(--border)] pb-2 mb-3">
                                     <div className="font-pixel text-[var(--ink)] text-[10px]">COMENTÁRIOS</div>
-                                    <div className="text-[var(--ink-soft)] text-lg">{(game.comments ?? []).length}</div>
+                                    <div className="nb-badge text-sm">{(game.comments ?? []).length}</div>
                                 </div>
 
                                 <div className="flex-1 overflow-y-auto pr-2 space-y-3">
@@ -716,6 +964,22 @@
                 saveGames(games);
             }, [games]);
 
+            // Windows 98 taskbar bridge events
+            useEffect(() => {
+                const onNav = (e) => {
+                    const v = e?.detail;
+                    if (!v) return;
+                    changeView(v);
+                };
+                const onLoginEvt = () => setIsLoginOpen(true);
+                window.addEventListener('nexushub:navigate', onNav);
+                window.addEventListener('nexushub:login', onLoginEvt);
+                return () => {
+                    window.removeEventListener('nexushub:navigate', onNav);
+                    window.removeEventListener('nexushub:login', onLoginEvt);
+                };
+            }, [games, user, likedIds]);
+
             // Deep link support (?game=ID)
             useEffect(() => {
                 const params = new URLSearchParams(window.location.search);
@@ -742,7 +1006,8 @@
 
             const appPaddingStyle = useMemo(() => ({
                 paddingTop: 'calc(5rem + var(--cloud-size))',
-                paddingBottom: 'var(--cloud-size)'
+                // cloud frame + taskbar (44px) + uma folga
+                paddingBottom: 'calc(var(--cloud-size) + 44px + 18px)'
             }), []);
 
             // Mantém usuário sincronizado com Firebase Auth (quando disponível)
@@ -951,7 +1216,9 @@
                                 ) : (
                                     <>
                                         <div className="flex items-center justify-between gap-4 mb-4">
-                                            <div className="text-[var(--ink-soft)] text-lg">Exibindo <b className="text-[var(--ink)]">{filteredGames.length}</b> jogo(s)</div>
+                                            <div className="text-[var(--ink-soft)] text-lg flex items-center gap-2">
+                                                Exibindo <span className="nb-badge">{filteredGames.length}</span> jogo(s)
+                                            </div>
                                             <button className="btn px-4 py-2" onClick={() => user ? changeView('dashboard') : setIsLoginOpen(true)}>
                                                 + Novo jogo
                                             </button>
@@ -1022,6 +1289,47 @@
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
+
+        // Render taskbar (Win98 touch) em um root separado
+        const taskbarEl = document.getElementById('taskbar98');
+        if (taskbarEl) {
+            const taskbarRoot = ReactDOM.createRoot(taskbarEl);
+
+            const TaskbarBridge = () => {
+                // espelha o estado do App via localStorage (simples e robusto para single-file)
+                const [user, setUser] = useState(() => {
+                    const raw = localStorage.getItem(STORAGE_KEYS.user);
+                    return safeJsonParse(raw, null);
+                });
+
+                useEffect(() => {
+                    const onStorage = () => {
+                        const raw = localStorage.getItem(STORAGE_KEYS.user);
+                        setUser(safeJsonParse(raw, null));
+                    };
+                    window.addEventListener('storage', onStorage);
+                    // também atualiza em intervalos curtos para refletir login no mesmo tab
+                    const t = setInterval(onStorage, 600);
+                    return () => {
+                        window.removeEventListener('storage', onStorage);
+                        clearInterval(t);
+                    };
+                }, []);
+
+                const onChangeView = (v) => {
+                    // aciona navegação via hash event simples
+                    window.dispatchEvent(new CustomEvent('nexushub:navigate', { detail: v }));
+                };
+
+                const onOpenLogin = () => {
+                    window.dispatchEvent(new CustomEvent('nexushub:login')); 
+                };
+
+                return <Taskbar98 user={user} onChangeView={onChangeView} onOpenLogin={onOpenLogin} />;
+            };
+
+            taskbarRoot.render(<TaskbarBridge />);
+        }
     </script>
 </body>
 </html>
