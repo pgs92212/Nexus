@@ -391,9 +391,103 @@
         .play-btn:hover {
             transform: scale(1.1);
         }
+
+        /* Platform Selection & Mobile Mode */
+        .platform-select-overlay {
+            background: #0a0a0f;
+            z-index: 9999;
+            transition: opacity 0.5s ease;
+        }
+
+        .platform-card {
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .platform-card:hover {
+            transform: translateY(-5px);
+            border-color: #6366f1;
+        }
+
+        /* Mobile Mode Optimizations */
+        body.mobile-mode .bg-orb {
+            display: none; /* Performance boost */
+        }
+
+        body.mobile-mode .glass-card,
+        body.mobile-mode .game-card {
+            backdrop-filter: none; /* Performance */
+            background: rgba(30, 30, 45, 0.95);
+        }
+
+        body.mobile-mode .game-card:hover {
+            transform: none; /* Disable hover effects */
+        }
+
+        body.mobile-mode .play-overlay {
+            opacity: 1; /* Always visible on mobile */
+            background: rgba(0,0,0,0.3);
+        }
+
+        body.mobile-mode .play-btn {
+            width: 48px;
+            height: 48px;
+            font-size: 20px;
+        }
+
+        body.mobile-mode .fab {
+            bottom: 20px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            font-size: 24px;
+        }
+
+        body.mobile-mode nav {
+            padding: 10px 16px;
+        }
+
+        body.mobile-mode .game-overlay {
+            padding: 0;
+        }
     </style>
 </head>
 <body class="text-white min-h-screen">
+    <!-- Platform Selector Modal -->
+    <div id="platform-selector" class="fixed inset-0 flex items-center justify-center p-4 platform-select-overlay">
+        <div class="max-w-4xl w-full animate-fade-in-up">
+            <div class="text-center mb-12">
+                <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-4xl font-bold mx-auto mb-6 shadow-lg shadow-indigo-500/30">
+                    N
+                </div>
+                <h1 class="text-4xl md:text-6xl font-bold mb-4">
+                    <span class="gradient-text">NexusHub</span>
+                </h1>
+                <p class="text-xl text-gray-400">Escolha sua plataforma para a melhor experiência</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 max-w-2xl mx-auto">
+                <!-- Mobile Option -->
+                <div onclick="selectPlatform('mobile')" class="platform-card glass-card p-6 md:p-8 text-center border-2 border-transparent hover:border-indigo-500 group">
+                    <div class="text-6xl mb-6 transform group-hover:scale-110 transition-transform">📱</div>
+                    <h3 class="text-2xl font-bold mb-2">Mobile</h3>
+                    <p class="text-gray-400 text-sm md:text-base">Layout otimizado para toque, leve, rápido e sem efeitos pesados.</p>
+                    <button class="btn-primary w-full mt-6">Selecionar Mobile</button>
+                </div>
+
+                <!-- PC Option -->
+                <div onclick="selectPlatform('pc')" class="platform-card glass-card p-6 md:p-8 text-center border-2 border-transparent hover:border-purple-500 group">
+                    <div class="text-6xl mb-6 transform group-hover:scale-110 transition-transform">💻</div>
+                    <h3 class="text-2xl font-bold mb-2">Computador</h3>
+                    <p class="text-gray-400 text-sm md:text-base">Experiência completa com gráficos avançados e imersão visual.</p>
+                    <button class="btn-secondary w-full mt-6">Selecionar PC</button>
+                </div>
+            </div>
+            
+            <p class="text-center text-gray-600 mt-12 text-sm">Você pode alterar isso recarregando a página</p>
+        </div>
+    </div>
+
     <!-- Background Orbs -->
     <div class="bg-orb orb-1"></div>
     <div class="bg-orb orb-2"></div>
@@ -595,7 +689,7 @@
     <div id="publish-modal" class="fixed inset-0 z-[200] hidden flex items-center justify-center p-4 modal-overlay">
         <div class="modal-content w-full max-w-2xl p-8 animate-fade-in-up relative max-h-[90vh] overflow-y-auto">
             <div class="mb-8">
-                <h2 class="text-3xl font-bold gradient-text">Publicar Jogo</h2>
+                <h2 id="modal-title" class="text-3xl font-bold gradient-text">Publicar Jogo</h2>
                 <p class="text-gray-400 mt-2">Cole o código HTML do seu jogo</p>
             </div>
 
@@ -608,6 +702,21 @@
                 <div>
                     <label class="block text-sm font-medium text-gray-300 mb-2">Descrição</label>
                     <input type="text" id="game-desc-input" class="input-field" placeholder="Uma breve descrição do seu jogo...">
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-2">Capa (URL da Imagem)</label>
+                        <input type="text" id="game-image-input" class="input-field" placeholder="https://...">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-2">Plataforma</label>
+                        <select id="game-platform-input" class="input-field cursor-pointer">
+                            <option value="both">💻 PC & 📱 Mobile</option>
+                            <option value="pc">💻 Apenas PC</option>
+                            <option value="mobile">📱 Apenas Mobile</option>
+                        </select>
+                    </div>
                 </div>
 
                 <div>
@@ -629,7 +738,7 @@
                     <p class="text-xs text-gray-500 mt-2">💡 Cole um documento HTML completo com seu jogo. Ele será executado em um iframe seguro.</p>
                 </div>
 
-                <button onclick="handlePublishGame()" class="btn-primary w-full py-4 text-lg mt-4">
+                <button id="publish-submit-btn" onclick="handlePublishGame()" class="btn-primary w-full py-4 text-lg mt-4">
                     🚀 Publicar Agora
                 </button>
             </div>
@@ -644,7 +753,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-        import { getDatabase, ref, push, onValue, runTransaction, set, onDisconnect, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+        import { getDatabase, ref, push, onValue, runTransaction, set, onDisconnect, serverTimestamp, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyBZTuu5I2FNx4ky1UcVohro_Ri_yo3YQfs",
@@ -666,18 +775,75 @@
         let currentGame = null;
         let customGames = {};
         let myPresenceRef = null;
+        let editingGameId = null;
+
+        // Platform Selection Logic
+        window.selectPlatform = (platform) => {
+            const selector = document.getElementById('platform-selector');
+            selector.classList.add('opacity-0', 'pointer-events-none');
+            setTimeout(() => selector.remove(), 500); // Remove after fade out
+
+            if (platform === 'mobile') {
+                document.body.classList.add('mobile-mode');
+                // Mobile specific tweaks
+                const viewport = document.querySelector("meta[name=viewport]");
+                if (viewport) {
+                    viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
+                }
+            }
+        };
 
         // Modal Controls
         window.openLoginModal = () => document.getElementById('login-modal').classList.remove('hidden');
         window.closeLoginModal = () => document.getElementById('login-modal').classList.add('hidden');
-        window.openPublishModal = () => {
+        
+        window.openPublishModal = (gameId = null) => {
             if (!currentUser) {
                 alert("Faça login para publicar jogos!");
                 openLoginModal();
                 return;
             }
-            document.getElementById('publish-modal').classList.remove('hidden');
+
+            const modal = document.getElementById('publish-modal');
+            const titleEl = document.getElementById('modal-title');
+            const btnEl = document.getElementById('publish-submit-btn');
+
+            if (gameId) {
+                // Edit Mode
+                const game = customGames[gameId];
+                if (!game) return;
+                
+                // Check ownership
+                if (game.userId !== currentUser.uid && game.author !== (currentUser.displayName || currentUser.email.split('@')[0])) {
+                    alert("Você não tem permissão para editar este jogo.");
+                    return;
+                }
+
+                editingGameId = gameId;
+                titleEl.textContent = "Editar Jogo";
+                btnEl.textContent = "💾 Salvar Alterações";
+                
+                document.getElementById('game-title-input').value = game.title;
+                document.getElementById('game-desc-input').value = game.description;
+                document.getElementById('game-html-input').value = game.html;
+                document.getElementById('game-image-input').value = game.thumbnail || '';
+                document.getElementById('game-platform-input').value = game.platform || 'both';
+            } else {
+                // Create Mode
+                editingGameId = null;
+                titleEl.textContent = "Publicar Jogo";
+                btnEl.textContent = "🚀 Publicar Agora";
+                
+                document.getElementById('game-title-input').value = '';
+                document.getElementById('game-desc-input').value = '';
+                document.getElementById('game-html-input').value = '';
+                document.getElementById('game-image-input').value = '';
+                document.getElementById('game-platform-input').value = 'both';
+            }
+            
+            modal.classList.remove('hidden');
         };
+
         window.closePublishModal = () => document.getElementById('publish-modal').classList.add('hidden');
 
         window.closeGame = () => {
@@ -782,32 +948,49 @@
             }
         }
 
-        // Publish Game with HTML
+        // Publish/Update Game
         window.handlePublishGame = () => {
             if (!currentUser) return;
             const title = document.getElementById('game-title-input').value.trim();
             const desc = document.getElementById('game-desc-input').value.trim();
             const html = document.getElementById('game-html-input').value.trim();
+            const thumbnail = document.getElementById('game-image-input').value.trim();
+            const platform = document.getElementById('game-platform-input').value;
 
             if (!title) return alert("Digite o nome do jogo!");
             if (!html) return alert("Cole o código HTML do jogo!");
 
             const authorName = currentUser.displayName || currentUser.email.split('@')[0];
             
-            push(ref(db, 'games'), {
-                title,
-                html,
-                description: desc || "Sem descrição",
-                author: authorName,
-                authorPhoto: currentUser.photoURL || null,
-                timestamp: Date.now()
-            }).then(() => {
-                closePublishModal();
-                document.getElementById('game-title-input').value = '';
-                document.getElementById('game-desc-input').value = '';
-                document.getElementById('game-html-input').value = '';
-                alert("Jogo publicado com sucesso! 🎮");
-            }).catch(e => alert("Erro ao publicar: " + e.message));
+            if (editingGameId) {
+                // Update existing game
+                update(ref(db, 'games/' + editingGameId), {
+                    title,
+                    html,
+                    description: desc || "Sem descrição",
+                    thumbnail: thumbnail || null,
+                    platform
+                }).then(() => {
+                    closePublishModal();
+                    alert("Jogo atualizado com sucesso! ✨");
+                }).catch(e => alert("Erro ao atualizar: " + e.message));
+            } else {
+                // Create new game
+                push(ref(db, 'games'), {
+                    title,
+                    html,
+                    description: desc || "Sem descrição",
+                    author: authorName,
+                    userId: currentUser.uid,
+                    authorPhoto: currentUser.photoURL || null,
+                    thumbnail: thumbnail || null,
+                    platform,
+                    timestamp: Date.now()
+                }).then(() => {
+                    closePublishModal();
+                    alert("Jogo publicado com sucesso! 🎮");
+                }).catch(e => alert("Erro ao publicar: " + e.message));
+            }
         };
 
         // Load Games
@@ -835,24 +1018,53 @@
                     customGames[key] = game;
                     const gradient = gradients[index % gradients.length];
                     const authorPhoto = game.authorPhoto || `https://ui-avatars.com/api/?name=${encodeURIComponent(game.author)}&background=6366f1&color=fff&size=32`;
+                    
+                    // Ownership check
+                    const isOwner = currentUser && (game.userId === currentUser.uid || game.author === (currentUser.displayName || currentUser.email.split('@')[0]));
+
+                    // Platform Icon
+                    let platformIcon = '';
+                    if (game.platform === 'pc') platformIcon = '💻';
+                    else if (game.platform === 'mobile') platformIcon = '📱';
+                    else platformIcon = '💻📱';
+
+                    // Background Style
+                    let bgStyle = '';
+                    let overlayClass = '';
+                    if (game.thumbnail) {
+                        bgStyle = `background-image: url('${game.thumbnail}'); background-size: cover; background-position: center;`;
+                        overlayClass = 'bg-black/60';
+                    }
 
                     const div = document.createElement('div');
-                    div.className = `game-card h-64 bg-gradient-to-br ${gradient}`;
-                    div.onclick = () => playGame(key);
+                    div.className = `game-card h-64 ${!game.thumbnail ? 'bg-gradient-to-br ' + gradient : ''}`;
+                    if (game.thumbnail) div.style = bgStyle;
+
                     div.innerHTML = `
-                        <div class="h-full p-5 flex flex-col justify-between game-card-content">
-                            <div class="flex items-center gap-2">
-                                <img src="${authorPhoto}" class="w-8 h-8 rounded-lg border border-white/20">
-                                <span class="text-sm font-medium text-white/80">${game.author}</span>
+                        <div class="h-full p-5 flex flex-col justify-between game-card-content ${overlayClass} w-full rounded-[20px]">
+                            <div class="flex items-start justify-between">
+                                <div class="flex items-center gap-2">
+                                    <img src="${authorPhoto}" class="w-8 h-8 rounded-lg border border-white/20">
+                                    <span class="text-sm font-medium text-white/80 shadow-black drop-shadow-md">${game.author}</span>
+                                </div>
+                                ${isOwner ? `
+                                    <button onclick="event.stopPropagation(); openPublishModal('${key}')" class="p-2 bg-white/10 hover:bg-white/20 rounded-lg text-xs font-bold backdrop-blur-md transition-colors" title="Editar Jogo">
+                                        ✏️ Editar
+                                    </button>
+                                ` : ''}
                             </div>
-                            <div>
-                                <div class="tag-pill inline-block mb-3">HTML5</div>
-                                <h4 class="text-xl font-bold mb-1">${game.title}</h4>
-                                <p class="text-sm text-white/70 line-clamp-2">${game.description}</p>
+                            
+                            <div onclick="playGame('${key}')" class="cursor-pointer">
+                                <div class="flex gap-2 mb-2">
+                                    <span class="tag-pill bg-black/40 backdrop-blur-sm border border-white/10">HTML5</span>
+                                    <span class="tag-pill bg-black/40 backdrop-blur-sm border border-white/10" title="Plataforma">${platformIcon}</span>
+                                </div>
+                                <h4 class="text-xl font-bold mb-1 shadow-black drop-shadow-lg">${game.title}</h4>
+                                <p class="text-sm text-white/70 line-clamp-2 shadow-black drop-shadow-md">${game.description}</p>
                             </div>
                         </div>
-                        <div class="play-overlay">
-                            <div class="play-btn">▶</div>
+                        <div class="play-overlay pointer-events-none">
+                            <div class="play-btn pointer-events-auto" onclick="playGame('${key}')">▶</div>
                             <span class="mt-3 font-semibold">Jogar Agora</span>
                         </div>
                     `;
