@@ -19,11 +19,15 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
 
     <!-- Firebase (modular init like the snippet you sent) -->
     <script type="module">
         import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAnalytics, isSupported } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics.js";
+        import { getFirestore } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getDatabase } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
         // Your web app's Firebase configuration
         const firebaseConfig = {
@@ -40,19 +44,28 @@
         // Expose config for the rest of the app (Babel/React script)
         window.NEXUSHUB_FIREBASE_CONFIG = firebaseConfig;
 
-        // Initialize Firebase (avoid double init)
+        // Initialize Firebase
+        // (mantemos getApps/getApp para evitar erro de app duplicado)
         const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
         window.NEXUSHUB_FIREBASE_APP = app;
 
-        // Initialize Analytics (optional in some environments)
+        // Initialize Analytics
+        let analytics = null;
         try {
             const supported = await isSupported();
             if (supported) {
-                window.NEXUSHUB_FIREBASE_ANALYTICS = getAnalytics(app);
+                analytics = getAnalytics(app);
             }
         } catch {
             // analytics may fail on http/file environments
         }
+        window.NEXUSHUB_FIREBASE_ANALYTICS = analytics;
+
+        // Initialize Firestore & Realtime Database (Modular)
+        const firestore = getFirestore(app);
+        const database = getDatabase(app);
+        window.NEXUSHUB_FIREBASE_FIRESTORE = firestore;
+        window.NEXUSHUB_FIREBASE_DATABASE = database;
     </script>
 
     <!-- Google Fonts: Pixel Style -->
@@ -288,6 +301,18 @@
             box-shadow: 9px 9px 0 var(--shadow-ink-strong);
         }
 
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+            border-color: var(--border-strong);
+            box-shadow: 7px 7px 0 var(--shadow-ink-strong);
+        }
+        .btn-danger:hover {
+            filter: brightness(1.03);
+            transform: translate(-1px, -1px);
+            box-shadow: 9px 9px 0 var(--shadow-ink-strong);
+        }
+
         .input {
             border: 3px solid var(--border-strong);
             background: rgba(255,255,255,0.82);
@@ -462,6 +487,9 @@
                     firebase.initializeApp(FIREBASE_CONFIG);
                 }
                 firebaseAuth = firebase.auth();
+                // Inicializa Firestore e RTDB (Compat)
+                window.firebaseFirestore = firebase.firestore();
+                window.firebaseDatabase = firebase.database();
                 firebaseReady = true;
                 try { firebase.analytics(); } catch { /* analytics pode falhar em http/file */ }
             }
@@ -477,6 +505,13 @@
             user: 'nexushub_user_v1',
             liked: 'nexushub_liked_game_ids_v1'
         };
+
+        // --- Admin ---
+        // IMPORTANTE: isto é apenas UI/client-side (não é segurança real). Para segurança de verdade, use regras do Firestore/RTDB.
+        const ADMIN_EMAIL = 'catboy@gmail.com';
+        function isAdminUser(u) {
+            return String(u?.email || '').trim().toLowerCase() === ADMIN_EMAIL;
+        }
 
         function safeJsonParse(value, fallback) {
             try {
@@ -643,6 +678,13 @@ ${html}
                                     <button className="start98-item" onClick={() => { setOpen(false); user ? onChangeView('dashboard') : onOpenLogin(); }}>
                                         Publicar jogo…
                                     </button>
+
+                                    {isAdminUser(user) && (
+                                        <button className="start98-item" onClick={() => { setOpen(false); onChangeView('admin'); }}>
+                                            Painel admin…
+                                        </button>
+                                    )}
+
                                     {user ? (
                                         <button className="start98-item" onClick={() => { setOpen(false); onChangeView('logout'); }}>
                                             Sair ({user.name})
@@ -778,6 +820,9 @@ ${html}
                             {user ? (
                                 <div className="flex items-center gap-2">
                                     <button className="btn px-3 py-2" onClick={() => onChangeView('dashboard')}>Meu painel</button>
+                                    {isAdminUser(user) && (
+                                        <button className="btn px-3 py-2" onClick={() => onChangeView('admin')} title="Admin">Admin</button>
+                                    )}
                                     <button className="btn px-3 py-2" onClick={() => onChangeView('logout')} title="Sair">Sair</button>
                                     <div className="w-9 h-9 border-2 border-[var(--border-strong)] bg-white/50 flex items-center justify-center font-bold">
                                         {user.name?.charAt(0) ?? 'U'}
@@ -831,7 +876,7 @@ ${html}
             );
         };
 
-        const GamePlayer = ({ game, user, liked, onBack, onToggleLike, onAddComment, onFullscreen, onShare, playerPanelRef }) => {
+        const GamePlayer = ({ game, user, liked, isAdmin, onBack, onToggleLike, onAddComment, onFullscreen, onShare, onAdminEdit, onAdminDelete, playerPanelRef }) => {
             const [newComment, setNewComment] = useState('');
             const iframeRef = useRef(null);
 
@@ -882,10 +927,22 @@ ${html}
                                             <h1 className="font-pixel text-[var(--ink)] text-sm md:text-base">{game.title}</h1>
                                             <div className="text-[var(--ink-soft)] text-lg">por <span className="underline">{game.author}</span> • jogadas: <b className="text-[var(--ink)]">{game.plays ?? 0}</b></div>
                                         </div>
-                                        <button className="btn px-3 py-2 flex items-center gap-2" onClick={() => onToggleLike(game.id)} title={liked ? 'Remover curtida' : 'Curtir'}>
-                                            <IconHeart filled={liked} />
-                                            <span className="text-lg font-bold">{game.likes ?? 0}</span>
-                                        </button>
+                                        <div className="flex items-center gap-2">
+                                            {isAdmin && (
+                                                <>
+                                                    <button className="btn px-3 py-2" onClick={() => onAdminEdit(game)} title="Editar jogo (admin)">
+                                                        Editar
+                                                    </button>
+                                                    <button className="btn btn-danger px-3 py-2" onClick={() => onAdminDelete(game.id)} title="Apagar jogo (admin)">
+                                                        Apagar
+                                                    </button>
+                                                </>
+                                            )}
+                                            <button className="btn px-3 py-2 flex items-center gap-2" onClick={() => onToggleLike(game.id)} title={liked ? 'Remover curtida' : 'Curtir'}>
+                                                <IconHeart filled={liked} />
+                                                <span className="text-lg font-bold">{game.likes ?? 0}</span>
+                                            </button>
+                                        </div>
                                     </div>
 
                                     <p className="mt-3 text-[var(--ink-soft)] text-xl leading-relaxed">{game.description || 'Sem descrição.'}</p>
@@ -1051,6 +1108,122 @@ ${html}
             );
         };
 
+        const AdminPanel = ({ user, games, onBack, onDelete, onEdit, onOpen }) => {
+            return (
+                <div className="max-w-6xl mx-auto w-full animate-fade-in">
+                    <div className="flex items-center justify-between gap-4 mb-5">
+                        <div>
+                            <div className="font-pixel text-[var(--ink)] text-sm">PAINEL ADMIN</div>
+                            <div className="text-[var(--ink-soft)] text-lg">acesso total: <b className="text-[var(--ink)]">{user?.email}</b></div>
+                        </div>
+                        <button className="btn px-3 py-2" onClick={onBack}>Voltar</button>
+                    </div>
+
+                    <div className="panel p-5">
+                        <div className="flex items-center justify-between border-b-2 border-[var(--border)] pb-2 mb-4">
+                            <div className="font-pixel text-[10px]">TODOS OS JOGOS</div>
+                            <div className="nb-badge text-sm">{games.length}</div>
+                        </div>
+
+                        {games.length === 0 ? (
+                            <div className="text-center text-[var(--ink-soft)] text-xl py-10">Nenhum jogo publicado ainda.</div>
+                        ) : (
+                            <div className="space-y-3">
+                                {games.map((g) => (
+                                    <div key={g.id} className="bg-white/50 border-2 border-[var(--border)] p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                                        <div className="min-w-0">
+                                            <div className="font-pixel text-[10px] text-[var(--ink)] truncate">{g.title}</div>
+                                            <div className="text-[var(--ink-soft)] text-lg">por <b className="text-[var(--ink)]">{g.author}</b> • jogadas: <b className="text-[var(--ink)]">{g.plays ?? 0}</b> • curtidas: <b className="text-[var(--ink)]">{g.likes ?? 0}</b></div>
+                                            <div className="text-[rgba(11,18,32,0.55)] text-base truncate">ID: {g.id}</div>
+                                        </div>
+                                        <div className="flex items-center gap-2 shrink-0">
+                                            <button className="btn px-3 py-2" onClick={() => onOpen(g)}>Abrir</button>
+                                            <button className="btn btn-accent px-3 py-2" onClick={() => onEdit(g)}>Editar</button>
+                                            <button className="btn btn-danger px-3 py-2" onClick={() => onDelete(g.id)}>Apagar</button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        const AdminEditModal = ({ isOpen, onClose, game, onSave }) => {
+            const [title, setTitle] = useState('');
+            const [thumbnail, setThumbnail] = useState('');
+            const [description, setDescription] = useState('');
+            const [html, setHtml] = useState('');
+
+            useEffect(() => {
+                if (!isOpen) return;
+                setTitle(game?.title ?? '');
+                setThumbnail(game?.thumbnail ?? '');
+                setDescription(game?.description ?? '');
+                setHtml(game?.html ?? '');
+            }, [isOpen, game?.id]);
+
+            if (!isOpen) return null;
+
+            const submit = (e) => {
+                e.preventDefault();
+                if (!game?.id) return;
+                onSave({
+                    id: game.id,
+                    title: String(title || '').trim(),
+                    thumbnail: String(thumbnail || '').trim(),
+                    description: String(description || '').trim(),
+                    html: String(html || '')
+                });
+            };
+
+            return (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/25" onClick={onClose}></div>
+
+                    <div className="relative w-full max-w-3xl panel panel-strong p-0 overflow-hidden animate-fade-in">
+                        <div className="win98-titlebar px-3 py-2 flex items-center justify-between">
+                            <div className="font-pixel text-[10px]">Editar jogo — Admin</div>
+                            <div className="flex items-center gap-2">
+                                <button className="win98-control" type="button" title="Fechar" onClick={onClose}>×</button>
+                            </div>
+                        </div>
+
+                        <form className="p-6 space-y-3" onSubmit={submit}>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <div>
+                                    <label className="font-pixel text-[10px] text-[var(--ink-soft)]">TÍTULO</label>
+                                    <input className="input w-full px-4 py-3" value={title} onChange={(e) => setTitle(e.target.value)} />
+                                </div>
+                                <div>
+                                    <label className="font-pixel text-[10px] text-[var(--ink-soft)]">THUMBNAIL (URL)</label>
+                                    <input className="input w-full px-4 py-3" value={thumbnail} onChange={(e) => setThumbnail(e.target.value)} />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="font-pixel text-[10px] text-[var(--ink-soft)]">DESCRIÇÃO</label>
+                                <input className="input w-full px-4 py-3" value={description} onChange={(e) => setDescription(e.target.value)} />
+                            </div>
+
+                            <div>
+                                <label className="font-pixel text-[10px] text-[var(--ink-soft)]">HTML</label>
+                                <textarea className="input w-full h-64 px-4 py-3 font-mono text-sm" value={html} onChange={(e) => setHtml(e.target.value)} />
+                            </div>
+
+                            <div className="flex flex-col sm:flex-row gap-2 justify-end pt-2">
+                                <button type="button" className="btn px-4 py-2" onClick={onClose}>Cancelar</button>
+                                <button type="submit" className="btn btn-accent px-4 py-2" disabled={!String(title || '').trim() || !String(html || '').trim()}>
+                                    Salvar alterações
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            );
+        };
+
         // --- App ---
         const App = () => {
             const [view, setView] = useState('home');
@@ -1061,11 +1234,37 @@ ${html}
                 return safeJsonParse(raw, null);
             });
 
-            const [games, setGames] = useState(() => loadGames());
+            const [games, setGames] = useState([]);
             const [query, setQuery] = useState('');
+
+            // Carrega jogos do Firestore ou LocalStorage (Fallback)
+            useEffect(() => {
+                const fetchGames = async () => {
+                    let remoteGames = [];
+                    if (window.firebaseFirestore) {
+                        try {
+                            const snapshot = await window.firebaseFirestore.collection('games').orderBy('id', 'desc').get();
+                            remoteGames = snapshot.docs.map(doc => ({ ...doc.data(), docId: doc.id }));
+                        } catch (e) {
+                            console.warn('Erro ao buscar no Firestore, usando local:', e);
+                        }
+                    }
+                    
+                    if (remoteGames.length > 0) {
+                        setGames(remoteGames);
+                    } else {
+                        setGames(loadGames());
+                    }
+                };
+                fetchGames();
+            }, []);
             const [likedIds, setLikedIds] = useState(() => loadLikedIds());
             const playerBoxRef = useRef(null);
             const playerPanelRef = useRef(null);
+
+            const isAdmin = useMemo(() => isAdminUser(user), [user]);
+            const [adminEditOpen, setAdminEditOpen] = useState(false);
+            const [adminEditingGame, setAdminEditingGame] = useState(null);
 
             // Persist games
             useEffect(() => {
@@ -1092,14 +1291,15 @@ ${html}
             useEffect(() => {
                 const params = new URLSearchParams(window.location.search);
                 const id = params.get('game');
-                if (id) {
-                    const found = games.find(g => String(g.id) === String(id));
-                    if (found) {
-                        setActiveId(found.id);
-                        setView('game');
-                    }
+                if (!id) return;
+                // só tenta abrir quando jogos estiverem carregados e ainda não há jogo ativo
+                if (activeId) return;
+                const found = games.find(g => String(g.id) === String(id));
+                if (found) {
+                    setActiveId(found.id);
+                    setView('game');
                 }
-            }, []); // once
+            }, [games, activeId]);
 
             const activeGame = useMemo(() => games.find(g => g.id === activeId) ?? null, [games, activeId]);
 
@@ -1216,6 +1416,8 @@ ${html}
                     setUser(null);
                     localStorage.removeItem(STORAGE_KEYS.user);
                     setView('home');
+                    setAdminEditOpen(false);
+                    setAdminEditingGame(null);
 
                     const url = new URL(window.location.href);
                     url.searchParams.delete('game');
@@ -1223,7 +1425,16 @@ ${html}
                     return;
                 }
 
+                // Proteção UI do painel admin (não é segurança real)
+                if (v === 'admin' && !isAdmin) {
+                    setIsLoginOpen(true);
+                    return;
+                }
+
                 setView(v);
+                setAdminEditOpen(false);
+                setAdminEditingGame(null);
+
                 if (v !== 'game') {
                     setActiveId(null);
                     const url = new URL(window.location.href);
@@ -1232,11 +1443,22 @@ ${html}
                 }
             };
 
-            const openGame = (game) => {
+            const openGame = async (game) => {
                 setGames(prev => prev.map(g => {
                     if (g.id !== game.id) return g;
                     return { ...g, plays: (g.plays ?? 0) + 1 };
                 }));
+
+                if (window.firebaseFirestore && game.docId) {
+                    try {
+                        const ref = window.firebaseFirestore.collection('games').doc(game.docId);
+                        await ref.update({
+                            plays: firebase.firestore.FieldValue.increment(1)
+                        });
+                    } catch (e) {
+                        console.warn('Falha ao atualizar plays no Firestore');
+                    }
+                }
 
                 setActiveId(game.id);
                 setView('game');
@@ -1248,7 +1470,7 @@ ${html}
                 window.scrollTo(0, 0);
             };
 
-            const publishGame = ({ title, description, html, thumbnail }) => {
+            const publishGame = async ({ title, description, html, thumbnail }) => {
                 if (!user) return;
                 const newGame = {
                     id: Date.now(),
@@ -1261,8 +1483,69 @@ ${html}
                     likes: 0,
                     comments: []
                 };
+
+                if (window.firebaseFirestore) {
+                    try {
+                        await window.firebaseFirestore.collection('games').add(newGame);
+                    } catch (e) {
+                        console.error('Falha ao salvar no Firestore:', e);
+                    }
+                }
+
                 setGames(prev => [newGame, ...prev]);
                 changeView('home');
+            };
+
+            // --- Admin actions (UI-only) ---
+            const adminDeleteGame = (gameId) => {
+                if (!isAdmin) return;
+                const g = games.find(x => x.id === gameId);
+                const ok = confirm(`Apagar o jogo "${g?.title || 'Sem título'}"?\n\nIsso remove do hub (localStorage).`);
+                if (!ok) return;
+
+                setGames(prev => prev.filter(x => x.id !== gameId));
+
+                // se estiver jogando esse jogo, volta pra home
+                if (activeId === gameId) {
+                    setActiveId(null);
+                    setView('home');
+                    const url = new URL(window.location.href);
+                    url.searchParams.delete('game');
+                    window.history.pushState({}, '', url);
+                }
+
+                // remove like local se existir
+                const next = new Set(likedIds);
+                if (next.has(gameId)) {
+                    next.delete(gameId);
+                    setLikedIds(next);
+                    saveLikedIds(next);
+                }
+            };
+
+            const adminStartEdit = (game) => {
+                if (!isAdmin) return;
+                setAdminEditingGame(game);
+                setAdminEditOpen(true);
+            };
+
+            const adminSaveEdit = ({ id, title, thumbnail, description, html }) => {
+                if (!isAdmin) return;
+                if (!String(title || '').trim() || !String(html || '').trim()) return;
+
+                setGames(prev => prev.map(g => {
+                    if (g.id !== id) return g;
+                    return {
+                        ...g,
+                        title: String(title).trim(),
+                        thumbnail: String(thumbnail || '').trim(),
+                        description: String(description || '').trim() || g.description,
+                        html: String(html)
+                    };
+                }));
+
+                setAdminEditOpen(false);
+                setAdminEditingGame(null);
             };
 
             const toggleLike = (gameId) => {
@@ -1387,11 +1670,14 @@ ${html}
                                     game={activeGame}
                                     user={user}
                                     liked={likedIds.has(activeGame.id)}
+                                    isAdmin={isAdmin}
                                     onBack={() => changeView('home')}
                                     onToggleLike={toggleLike}
                                     onAddComment={addComment}
                                     onFullscreen={fullscreen}
                                     onShare={shareGame}
+                                    onAdminEdit={adminStartEdit}
+                                    onAdminDelete={adminDeleteGame}
                                     playerPanelRef={playerPanelRef}
                                 />
                             </div>
@@ -1410,6 +1696,27 @@ ${html}
                                 </button>
                             </div>
                         )}
+
+                        {view === 'admin' && user && isAdmin && (
+                            <AdminPanel
+                                user={user}
+                                games={games}
+                                onBack={() => changeView('home')}
+                                onDelete={adminDeleteGame}
+                                onEdit={adminStartEdit}
+                                onOpen={(g) => openGame(g)}
+                            />
+                        )}
+
+                        {view === 'admin' && (!user || !isAdmin) && (
+                            <div className="panel p-10 text-center max-w-xl w-full animate-fade-in">
+                                <div className="font-pixel text-[var(--ink)] text-sm mb-2">ACESSO RESTRITO</div>
+                                <div className="text-[var(--ink-soft)] text-xl">Este painel é exclusivo do administrador.</div>
+                                <button className="btn btn-accent mt-5 px-5 py-3 font-bold" onClick={() => setIsLoginOpen(true)}>
+                                    ENTRAR
+                                </button>
+                            </div>
+                        )}
                     </main>
 
                     <footer className="safe-x pb-[var(--cloud-size)]">
@@ -1423,6 +1730,13 @@ ${html}
                         isOpen={isLoginOpen}
                         onClose={() => setIsLoginOpen(false)}
                         onLogin={handleLogin}
+                    />
+
+                    <AdminEditModal
+                        isOpen={adminEditOpen}
+                        onClose={() => { setAdminEditOpen(false); setAdminEditingGame(null); }}
+                        game={adminEditingGame}
+                        onSave={adminSaveEdit}
                     />
                 </div>
             );
