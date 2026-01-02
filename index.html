@@ -534,6 +534,38 @@
             }
         }
 
+        // Garante que HTML colado rode no iframe mesmo se vier incompleto
+        function ensureFullHtml(input) {
+            const html = String(input ?? '').trim();
+            if (!html) {
+                return '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"/></head><body>Sem conteúdo.</body></html>';
+            }
+
+            const hasHtmlTag = /<html[\s>]/i.test(html);
+            const hasDoctype = /<!doctype/i.test(html);
+
+            if (hasHtmlTag) {
+                return hasDoctype ? html : `<!DOCTYPE html>\n${html}`;
+            }
+
+            // Caso o usuário cole apenas um trecho (ex: <canvas> + <script>), embrulhamos num documento
+            return `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    html, body { margin: 0; height: 100%; }
+    body { overflow: hidden; background: #000; color: #fff; }
+    canvas { display: block; }
+  </style>
+</head>
+<body>
+${html}
+</body>
+</html>`;
+        }
+
         // --- Icons ---
         const IconSearch = () => (
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
@@ -799,8 +831,17 @@
             );
         };
 
-        const GamePlayer = ({ game, user, liked, onBack, onToggleLike, onAddComment, onFullscreen, onShare }) => {
+        const GamePlayer = ({ game, user, liked, onBack, onToggleLike, onAddComment, onFullscreen, onShare, playerPanelRef }) => {
             const [newComment, setNewComment] = useState('');
+            const iframeRef = useRef(null);
+
+            useEffect(() => {
+                // Dá foco no iframe quando entrar no jogo (melhora teclado em jogos)
+                const t = setTimeout(() => {
+                    try { iframeRef.current?.focus(); } catch {}
+                }, 150);
+                return () => clearTimeout(t);
+            }, [game?.id]);
 
             const handleSubmit = (e) => {
                 e.preventDefault();
@@ -822,13 +863,16 @@
 
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         <div className="lg:col-span-2 space-y-4">
-                            <div className="panel overflow-hidden">
+                            <div ref={playerPanelRef} className="panel overflow-hidden">
                                 <div className="aspect-video w-full bg-black border-b-2 border-[var(--border)]">
                                     <iframe
-                                        srcDoc={game.html}
+                                        ref={iframeRef}
+                                        srcDoc={ensureFullHtml(game.html)}
                                         className="w-full h-full border-0"
                                         title={game.title}
-                                        sandbox="allow-scripts allow-modals allow-popups"
+                                        // Permissões comuns para jogos
+                                        sandbox="allow-scripts allow-modals allow-popups allow-forms allow-pointer-lock allow-same-origin"
+                                        allow="fullscreen; gamepad; autoplay; clipboard-read; clipboard-write"
                                     />
                                 </div>
 
@@ -993,7 +1037,7 @@
                                 )}
 
                                 <div className="text-[rgba(11,18,32,0.55)] text-lg">
-                                    Dica: pode incluir CSS/JS inline. O jogo roda em <b>iframe</b> via <code>srcDoc</code>.
+                                    Dica: você pode colar o <b>HTML completo</b> (recomendado) ou apenas um trecho (ex: <code>&lt;canvas&gt;</code> + <code>&lt;script&gt;</code>). O NexusHub embrulha tudo num documento e roda em <b>iframe</b> (com suporte a teclado, pointer-lock e tela cheia).
                                 </div>
                             </div>
 
@@ -1021,6 +1065,7 @@
             const [query, setQuery] = useState('');
             const [likedIds, setLikedIds] = useState(() => loadLikedIds());
             const playerBoxRef = useRef(null);
+            const playerPanelRef = useRef(null);
 
             // Persist games
             useEffect(() => {
@@ -1256,7 +1301,7 @@
             };
 
             const fullscreen = async () => {
-                const el = playerBoxRef.current;
+                const el = playerPanelRef.current || playerBoxRef.current;
                 if (!el) return;
                 try {
                     if (document.fullscreenElement) {
@@ -1347,6 +1392,7 @@
                                     onAddComment={addComment}
                                     onFullscreen={fullscreen}
                                     onShare={shareGame}
+                                    playerPanelRef={playerPanelRef}
                                 />
                             </div>
                         )}
