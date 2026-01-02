@@ -20,6 +20,41 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics-compat.js"></script>
 
+    <!-- Firebase (modular init like the snippet you sent) -->
+    <script type="module">
+        import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAnalytics, isSupported } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics.js";
+
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCFl9OI_eEpKpQzkQVkhxfh0LnjoCsPoaM",
+            authDomain: "nexushub-ed3eb.firebaseapp.com",
+            databaseURL: "https://nexushub-ed3eb-default-rtdb.firebaseio.com",
+            projectId: "nexushub-ed3eb",
+            storageBucket: "nexushub-ed3eb.firebasestorage.app",
+            messagingSenderId: "368949540570",
+            appId: "1:368949540570:web:c84794253c47c931a257e3",
+            measurementId: "G-NS06XS0YDW"
+        };
+
+        // Expose config for the rest of the app (Babel/React script)
+        window.NEXUSHUB_FIREBASE_CONFIG = firebaseConfig;
+
+        // Initialize Firebase (avoid double init)
+        const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+        window.NEXUSHUB_FIREBASE_APP = app;
+
+        // Initialize Analytics (optional in some environments)
+        try {
+            const supported = await isSupported();
+            if (supported) {
+                window.NEXUSHUB_FIREBASE_ANALYTICS = getAnalytics(app);
+            }
+        } catch {
+            // analytics may fail on http/file environments
+        }
+    </script>
+
     <!-- Google Fonts: Pixel Style -->
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet" />
 
@@ -405,8 +440,8 @@
         const { useEffect, useMemo, useRef, useState } = React;
 
         // --- Firebase (Auth + Analytics) ---
-        // Config fornecida por você
-        const FIREBASE_CONFIG = {
+        // Config (pode vir do <script type="module"> acima)
+        const FIREBASE_CONFIG = window.NEXUSHUB_FIREBASE_CONFIG || {
             apiKey: "AIzaSyCFl9OI_eEpKpQzkQVkhxfh0LnjoCsPoaM",
             authDomain: "nexushub-ed3eb.firebaseapp.com",
             databaseURL: "https://nexushub-ed3eb-default-rtdb.firebaseio.com",
@@ -417,16 +452,18 @@
             measurementId: "G-NS06XS0YDW"
         };
 
+        // Nota: como estamos em ambiente sem build, usamos Auth via "compat".
+        // O script modular acima apenas garante init/analytics no padrão que você colou.
         let firebaseReady = false;
         let firebaseAuth = null;
         try {
-            if (window.firebase) {
+            if (window.firebase && FIREBASE_CONFIG) {
                 if (!firebase.apps?.length) {
                     firebase.initializeApp(FIREBASE_CONFIG);
                 }
                 firebaseAuth = firebase.auth();
                 firebaseReady = true;
-                try { firebase.analytics(); } catch { /* analytics pode falhar em http */ }
+                try { firebase.analytics(); } catch { /* analytics pode falhar em http/file */ }
             }
         } catch (e) {
             console.warn('Firebase init falhou:', e);
@@ -469,6 +506,32 @@
 
         function saveLikedIds(set) {
             localStorage.setItem(STORAGE_KEYS.liked, JSON.stringify([...set]));
+        }
+
+        function friendlyAuthError(err) {
+            const code = err?.code || '';
+            switch (code) {
+                case 'auth/invalid-email':
+                    return 'E-mail inválido. Verifique e tente novamente.';
+                case 'auth/missing-password':
+                    return 'Informe sua senha.';
+                case 'auth/weak-password':
+                    return 'Senha fraca. Use pelo menos 6 caracteres.';
+                case 'auth/email-already-in-use':
+                    return 'Este e-mail já está em uso. Tente entrar com sua senha.';
+                case 'auth/operation-not-allowed':
+                    return 'Login por e-mail/senha não está habilitado no Firebase. Ative em Authentication → Sign-in method.';
+                case 'auth/user-disabled':
+                    return 'Esta conta foi desativada.';
+                case 'auth/too-many-requests':
+                    return 'Muitas tentativas. Aguarde um pouco e tente novamente.';
+                case 'auth/invalid-login-credentials':
+                case 'auth/invalid-credential':
+                case 'auth/wrong-password':
+                    return 'Credenciais inválidas. Confira e-mail e senha.';
+                default:
+                    return err?.message || 'Não foi possível entrar.';
+            }
         }
 
         // --- Icons ---
@@ -636,7 +699,7 @@
                         </form>
 
                         <div className="mt-3 text-[rgba(11,18,32,0.55)] text-base">
-                            {window.firebase ? 'Autenticação via Firebase (e-mail/senha)' : 'Modo demo (Firebase não carregou)'}
+                            {window.firebase ? 'Autenticação via Firebase (e-mail/senha). Se der erro, confira se o provedor “E-mail/senha” está ativado no console.' : 'Modo demo (Firebase não carregou)'}
                         </div>
 
                         {error && (
@@ -1036,19 +1099,51 @@
                         throw new Error('Use e-mail e senha para entrar.');
                     }
 
-                    if (!email?.trim() || !password) {
+                    const em = String(email || '').trim();
+                    const pw = String(password || '');
+
+                    if (!em || !pw) {
                         throw new Error('Informe e-mail e senha.');
                     }
 
-                    // Tenta entrar; se não existir, cria a conta
+                    // Observação:
+                    // Em alguns ambientes, erros podem vir como auth/invalid-credential.
+                    // Aqui: tentamos login; se for claramente "usuário não existe", criamos.
                     try {
-                        await firebaseAuth.signInWithEmailAndPassword(email.trim(), password);
+                        await firebaseAuth.signInWithEmailAndPassword(em, pw);
                     } catch (e) {
-                        if (e?.code === 'auth/user-not-found') {
-                            await firebaseAuth.createUserWithEmailAndPassword(email.trim(), password);
-                        } else {
-                            throw e;
+                        const code = e?.code;
+
+                        // Alguns projetos retornam auth/invalid-credential também quando o usuário não existe.
+                        // Para evitar erro falso, checamos se o e-mail tem métodos cadastrados.
+                        const maybeNoUser = [
+                            'auth/user-not-found',
+                            'auth/invalid-credential',
+                            'auth/invalid-login-credentials'
+                        ].includes(code);
+
+                        if (maybeNoUser && typeof firebaseAuth.fetchSignInMethodsForEmail === 'function') {
+                            try {
+                                const methods = await firebaseAuth.fetchSignInMethodsForEmail(em);
+                                const hasAccount = Array.isArray(methods) && methods.length > 0;
+
+                                if (!hasAccount) {
+                                    try {
+                                        await firebaseAuth.createUserWithEmailAndPassword(em, pw);
+                                    } catch (e2) {
+                                        throw new Error(friendlyAuthError(e2));
+                                    }
+
+                                    setIsLoginOpen(false);
+                                    return;
+                                }
+                            } catch {
+                                // se falhar a checagem, cai no erro padrão abaixo
+                            }
                         }
+
+                        // Não tenta criar conta quando parece ser senha incorreta/credencial inválida
+                        throw new Error(friendlyAuthError(e));
                     }
 
                     setIsLoginOpen(false);
