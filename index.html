@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NexusHub</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+
+    <!-- React & ReactDOM -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+
+    <!-- Babel -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- Firebase (compat CDN for no-build environments) -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics-compat.js"></script>
+
+    <!-- Google Fonts: Pixel Style -->
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet" />
+
+    <style>
+        :root {
+            /* Fundo um pouco menos claro (céu mais “fechado”) */
+            --bg-sky: #5f97b3;
+            --bg-sky-2: #78abc5;
+
+            --ink: #0b1220;
+            --ink-soft: rgba(11, 18, 32, 0.74);
+
+            /* Painéis levemente mais escuros para reduzir claridade geral */
+            --panel: rgba(232, 242, 251, 0.50);
+            --panel-strong: rgba(232, 242, 251, 0.62);
+
+            --border: rgba(11, 18, 32, 0.32);
+            --border-strong: rgba(11, 18, 32, 0.50);
+
+            --accent: #1d4ed8;      /* indigo/blue */
+            --accent-soft: rgba(29, 78, 216, 0.14);
+            --danger: #b42366;      /* pink mais contido */
+
+            --cloud-size: 56px;
+
+            /* Windows 7-ish cursors (SVG data URIs) */
+            --cursor-arrow: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='32'%20height='32'%20viewBox='0%200%2032%2032'%20shape-rendering='crispEdges'%3E%3Cpath%20d='M3%203%20L3%2027%20L9%2021%20L13%2030%20L17%2028%20L13%2019%20L24%2019%20Z'%20fill='%23ffffff'%20stroke='%23000000'%20stroke-width='2'/%3E%3C/svg%3E");
+            --cursor-hand: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='32'%20height='32'%20viewBox='0%200%2032%2032'%20shape-rendering='crispEdges'%3E%3Cpath%20d='M12%203%20C13%203%2014%204%2014%205%20L14%2015%20L15%2015%20L15%206%20C15%205%2016%204%2017%204%20C18%204%2019%205%2019%206%20L19%2015%20L20%2015%20L20%207%20C20%206%2021%205%2022%205%20C23%205%2024%206%2024%207%20L24%2016%20C24%2022%2021%2027%2016%2027%20C11%2027%209%2023%209%2021%20L9%2017%20L8%2016%20C7%2015%207%2014%208%2013%20C9%2012%2010%2012%2011%2013%20L12%2014%20L12%205%20C12%204%2011%203%2012%203%20Z'%20fill='%23ffffff'%20stroke='%23000000'%20stroke-width='2'/%3E%3C/svg%3E");
+
+            /* Pixel cloud tiles (horizontal + vertical) */
+            --cloud-tile-h: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='64'%20height='32'%20viewBox='0%200%2064%2032'%20shape-rendering='crispEdges'%3E%3Crect%20width='64'%20height='32'%20fill='none'/%3E%3Crect%20x='0'%20y='24'%20width='64'%20height='8'%20fill='%23bfd8e6'/%3E%3Cg%20fill='%23eaf4fb'%3E%3Crect%20x='0'%20y='16'%20width='64'%20height='8'/%3E%3Crect%20x='8'%20y='8'%20width='48'%20height='8'/%3E%3Crect%20x='16'%20y='0'%20width='32'%20height='8'/%3E%3C/g%3E%3C/svg%3E");
+            --cloud-tile-v: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='32'%20height='64'%20viewBox='0%200%2032%2064'%20shape-rendering='crispEdges'%3E%3Crect%20width='32'%20height='64'%20fill='none'/%3E%3Crect%20x='24'%20y='0'%20width='8'%20height='64'%20fill='%23bfd8e6'/%3E%3Cg%20fill='%23eaf4fb'%3E%3Crect%20x='16'%20y='0'%20width='8'%20height='64'/%3E%3Crect%20x='8'%20y='8'%20width='8'%20height='48'/%3E%3Crect%20x='0'%20y='16'%20width='8'%20height='32'/%3E%3C/g%3E%3C/svg%3E");
+        }
+
+        body {
+            font-family: 'VT323', monospace;
+            color: var(--ink);
+            font-size: 1.2rem;
+            cursor: var(--cursor-arrow) 2 2, auto;
+            overflow-x: hidden;
+            background:
+                radial-gradient(1200px 600px at 20% 10%, rgba(255,255,255,0.22), rgba(255,255,255,0) 60%),
+                radial-gradient(900px 520px at 80% 35%, rgba(0,0,0,0.12), rgba(0,0,0,0) 60%),
+                linear-gradient(180deg, var(--bg-sky-2), var(--bg-sky));
+        }
+
+        /* Darken/vignette overlay to reduce brightness */
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 1;
+            /* Um pouco mais de vinheta para “baixar” a claridade */
+            background:
+                radial-gradient(900px 520px at 20% 0%, rgba(0,0,0,0.10), rgba(0,0,0,0.26) 70%),
+                linear-gradient(180deg, rgba(0,0,0,0.10), rgba(0,0,0,0.26));
+        }
+
+        #root {
+            position: relative;
+            z-index: 10;
+        }
+
+        /* Pixel look */
+        * {
+            border-radius: 0 !important;
+            box-sizing: border-box;
+        }
+
+        a, button, [role="button"], .cursor-pointer {
+            cursor: var(--cursor-hand) 10 2, pointer;
+        }
+
+        .font-pixel {
+            font-family: 'Press Start 2P', cursive;
+            line-height: 1.5;
+        }
+
+        input, textarea {
+            font-family: 'VT323', monospace;
+            font-size: 1.25rem;
+        }
+
+        /* Subtle custom scrollbar */
+        ::-webkit-scrollbar { width: 12px; background: rgba(255,255,255,0.55); }
+        ::-webkit-scrollbar-thumb { background: rgba(11, 18, 32, 0.22); border: 2px solid rgba(255,255,255,0.35); }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(11, 18, 32, 0.35); }
+
+        /* Pixel cloud frame */
+        .cloud-border {
+            position: fixed;
+            pointer-events: none;
+            z-index: 45;
+            image-rendering: pixelated;
+            /* menos contraste na sombra */
+            filter: drop-shadow(1px 1px 0 rgba(11,18,32,0.06));
+        }
+        .cloud-top {
+            top: 0; left: 0; right: 0;
+            height: var(--cloud-size);
+            background-image: var(--cloud-tile-h);
+            background-repeat: repeat-x;
+            background-position: left bottom;
+            background-size: auto 100%;
+        }
+        .cloud-bottom {
+            bottom: 0; left: 0; right: 0;
+            height: var(--cloud-size);
+            background-image: var(--cloud-tile-h);
+            background-repeat: repeat-x;
+            background-position: left top;
+            background-size: auto 100%;
+            transform: scaleY(-1);
+            transform-origin: center;
+        }
+        .cloud-left {
+            top: 0; bottom: 0; left: 0;
+            width: var(--cloud-size);
+            background-image: var(--cloud-tile-v);
+            background-repeat: repeat-y;
+            background-position: right top;
+            background-size: 100% auto;
+        }
+        .cloud-right {
+            top: 0; bottom: 0; right: 0;
+            width: var(--cloud-size);
+            background-image: var(--cloud-tile-v);
+            background-repeat: repeat-y;
+            background-position: left top;
+            background-size: 100% auto;
+            transform: scaleX(-1);
+            transform-origin: center;
+        }
+
+        /* Safe padding so content doesn't collide with borders */
+        .safe-x {
+            padding-left: calc(1.25rem + var(--cloud-size));
+            padding-right: calc(1.25rem + var(--cloud-size));
+        }
+        @media (min-width: 1024px) {
+            .safe-x {
+                padding-left: calc(2.5rem + var(--cloud-size));
+                padding-right: calc(2.5rem + var(--cloud-size));
+            }
+        }
+
+        .panel {
+            background: var(--panel);
+            border: 2px solid var(--border);
+            box-shadow: 5px 5px 0 rgba(11,18,32,0.10);
+            backdrop-filter: blur(2px);
+        }
+        .panel-strong { background: var(--panel-strong); }
+
+        /* micro-efeitos para “design” mais polido */
+        .panel, .btn, .input { transform: translateZ(0); }
+
+        .btn {
+            border: 2px solid var(--border-strong);
+            background: rgba(235, 245, 252, 0.88);
+            color: var(--ink);
+            box-shadow: 4px 4px 0 rgba(11,18,32,0.12);
+            transition: transform 80ms ease, background 120ms ease, box-shadow 120ms ease, filter 120ms ease;
+            user-select: none;
+        }
+        .btn:hover {
+            background: rgba(235, 245, 252, 0.96);
+            box-shadow: 5px 5px 0 rgba(11,18,32,0.14);
+        }
+        .btn:active {
+            transform: translate(1px, 1px);
+            box-shadow: 3px 3px 0 rgba(11,18,32,0.10);
+        }
+
+        .btn-accent {
+            background: var(--accent);
+            color: white;
+            border-color: rgba(11,18,32,0.55);
+        }
+        .btn-accent:hover { filter: brightness(1.05); }
+
+        .input {
+            border: 2px solid var(--border);
+            background: rgba(255,255,255,0.85);
+            color: var(--ink);
+            box-shadow: 4px 4px 0 rgba(11,18,32,0.10);
+        }
+        .input:focus {
+            outline: none;
+            border-color: rgba(29,78,216,0.55);
+            box-shadow: 0 0 0 3px rgba(29,78,216,0.14), 4px 4px 0 rgba(11,18,32,0.10);
+        }
+
+        @keyframes fade-in {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in { animation: fade-in 0.35s ease-out forwards; }
+    </style>
+</head>
+<body class="antialiased min-h-screen flex flex-col">
+    <!-- Cloud frame -->
+    <div class="cloud-border cloud-top" aria-hidden="true"></div>
+    <div class="cloud-border cloud-bottom" aria-hidden="true"></div>
+    <div class="cloud-border cloud-left" aria-hidden="true"></div>
+    <div class="cloud-border cloud-right" aria-hidden="true"></div>
+
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useEffect, useMemo, useRef, useState } = React;
+
+        // --- Firebase (Auth + Analytics) ---
+        // Config fornecida por você
+        const FIREBASE_CONFIG = {
+            apiKey: "AIzaSyCFl9OI_eEpKpQzkQVkhxfh0LnjoCsPoaM",
+            authDomain: "nexushub-ed3eb.firebaseapp.com",
+            databaseURL: "https://nexushub-ed3eb-default-rtdb.firebaseio.com",
+            projectId: "nexushub-ed3eb",
+            storageBucket: "nexushub-ed3eb.firebasestorage.app",
+            messagingSenderId: "368949540570",
+            appId: "1:368949540570:web:c84794253c47c931a257e3",
+            measurementId: "G-NS06XS0YDW"
+        };
+
+        let firebaseReady = false;
+        let firebaseAuth = null;
+        try {
+            if (window.firebase) {
+                if (!firebase.apps?.length) {
+                    firebase.initializeApp(FIREBASE_CONFIG);
+                }
+                firebaseAuth = firebase.auth();
+                firebaseReady = true;
+                try { firebase.analytics(); } catch { /* analytics pode falhar em http */ }
+            }
+        } catch (e) {
+            console.warn('Firebase init falhou:', e);
+            firebaseReady = false;
+            firebaseAuth = null;
+        }
+
+        // --- Storage helpers ---
+        const STORAGE_KEYS = {
+            games: 'nexushub_games_v2',
+            user: 'nexushub_user_v1',
+            liked: 'nexushub_liked_game_ids_v1'
+        };
+
+        function safeJsonParse(value, fallback) {
+            try {
+                const v = JSON.parse(value);
+                return v ?? fallback;
+            } catch {
+                return fallback;
+            }
+        }
+
+        function loadGames() {
+            const raw = localStorage.getItem(STORAGE_KEYS.games);
+            const games = safeJsonParse(raw, []);
+            if (!Array.isArray(games)) return [];
+            return games;
+        }
+
+        function saveGames(games) {
+            localStorage.setItem(STORAGE_KEYS.games, JSON.stringify(games));
+        }
+
+        function loadLikedIds() {
+            const raw = localStorage.getItem(STORAGE_KEYS.liked);
+            const ids = safeJsonParse(raw, []);
+            return new Set(Array.isArray(ids) ? ids : []);
+        }
+
+        function saveLikedIds(set) {
+            localStorage.setItem(STORAGE_KEYS.liked, JSON.stringify([...set]));
+        }
+
+        // --- Icons ---
+        const IconSearch = () => (
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+            </svg>
+        );
+
+        const IconHeart = ({ filled }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" fill={filled ? "currentColor" : "none"} viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className={`w-5 h-5 ${filled ? 'text-[var(--danger)]' : 'text-[rgba(11,18,32,0.45)]'}`}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z" />
+            </svg>
+        );
+
+        const IconSend = () => (
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 12 3.269 3.126A59.768 59.768 0 0 1 21.485 12 59.77 59.77 0 0 1 3.27 20.876L5.999 12Zm0 0h7.5" />
+            </svg>
+        );
+
+        const IconLink = () => (
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 0 1 6.364 6.364l-3.536 3.536a4.5 4.5 0 0 1-6.364-6.364m3.182-3.182a4.5 4.5 0 0 0-6.364 0L4.936 6.578a4.5 4.5 0 0 0 6.364 6.364" />
+            </svg>
+        );
+
+        const IconExpand = () => (
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75h6v2.25H6v3.75H3.75V3.75Zm14.25 0h2.25v6H18V6h-3.75V3.75Zm2.25 14.25v2.25h-6V18H18v-3.75h2.25ZM3.75 18H6v-3.75h3.75V12H3.75v6Z" />
+            </svg>
+        );
+
+        // --- Components ---
+
+        const AuthModal = ({ isOpen, onClose, onLogin }) => {
+            const [email, setEmail] = useState('');
+            const [password, setPassword] = useState('');
+            const [busy, setBusy] = useState(false);
+            const [error, setError] = useState('');
+
+            if (!isOpen) return null;
+
+            const submitEmail = async (e) => {
+                e.preventDefault();
+                setError('');
+                setBusy(true);
+                try {
+                    await onLogin({ provider: 'password', email, password });
+                } catch (err) {
+                    setError(err?.message || 'Não foi possível entrar.');
+                } finally {
+                    setBusy(false);
+                }
+            };
+
+            return (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/25" onClick={onClose}></div>
+
+                    <div className="relative w-full max-w-md panel panel-strong p-7 animate-fade-in">
+                        <div className="mb-5">
+                            <h2 className="font-pixel text-[var(--ink)] text-sm md:text-base mb-2">ACESSAR A NEXUSHUB</h2>
+                            <p className="text-[var(--ink-soft)] text-lg">Entre para publicar jogos, curtir e comentar.</p>
+                        </div>
+
+                        <form className="space-y-3" onSubmit={submitEmail}>
+                            <input
+                                className="w-full input px-4 py-3"
+                                type="email"
+                                placeholder="E-mail"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                autoComplete="email"
+                                disabled={busy}
+                            />
+                            <input
+                                className="w-full input px-4 py-3"
+                                type="password"
+                                placeholder="Senha"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                autoComplete="current-password"
+                                disabled={busy}
+                            />
+                            <button className="w-full btn btn-accent py-3 px-4 font-bold" type="submit" disabled={busy}>
+                                Entrar
+                            </button>
+                        </form>
+
+                        <div className="mt-3 text-[rgba(11,18,32,0.55)] text-base">
+                            {window.firebase ? 'Autenticação via Firebase (e-mail/senha)' : 'Modo demo (Firebase não carregou)'}
+                        </div>
+
+                        {error && (
+                            <div className="mt-4 border-2 border-[rgba(180,35,102,0.40)] bg-[rgba(180,35,102,0.10)] p-3 text-[var(--ink)] font-bold animate-fade-in">
+                                {error}
+                            </div>
+                        )}
+
+                        <button className="mt-5 text-[var(--ink-soft)] underline" onClick={onClose} disabled={busy}>Cancelar</button>
+                    </div>
+                </div>
+            );
+        };
+
+        const Header = ({ user, onLoginClick, onChangeView }) => {
+            return (
+                <header
+                    className="fixed left-0 right-0 z-40 safe-x h-20 flex items-center justify-between"
+                    style={{ top: 'var(--cloud-size)' }}
+                >
+                    <div className="panel panel-strong w-full h-16 flex items-center justify-between px-4">
+                        <div className="flex items-center gap-3 cursor-pointer" onClick={() => onChangeView('home')}>
+                            <img
+                                src="https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?auto=format&fit=crop&q=80&w=100"
+                                alt="NexusHub"
+                                className="w-10 h-10 border-2 border-[var(--border-strong)] object-cover"
+                            />
+                            <div className="leading-none">
+                                <div className="font-pixel text-[var(--ink)] text-sm">NEXUS_HUB</div>
+                                <div className="text-[var(--ink-soft)] text-base">publique • jogue • comente</div>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => user ? onChangeView('dashboard') : onLoginClick()}
+                                className="btn btn-accent px-3 py-2 inline-flex items-center gap-2"
+                                title="Publicar"
+                            >
+                                <span className="font-pixel text-[10px]">PUBLICAR</span>
+                            </button>
+
+                            {user ? (
+                                <div className="flex items-center gap-2">
+                                    <button className="btn px-3 py-2" onClick={() => onChangeView('dashboard')}>Meu painel</button>
+                                    <button className="btn px-3 py-2" onClick={() => onChangeView('logout')} title="Sair">Sair</button>
+                                    <div className="w-9 h-9 border-2 border-[var(--border-strong)] bg-white/50 flex items-center justify-center font-bold">
+                                        {user.name?.charAt(0) ?? 'U'}
+                                    </div>
+                                </div>
+                            ) : (
+                                <button onClick={onLoginClick} className="btn btn-accent px-4 py-2 font-bold">Entrar</button>
+                            )}
+                        </div>
+                    </div>
+                </header>
+            );
+        };
+
+        const GameCard = ({ game, onClick }) => {
+            return (
+                <div
+                    onClick={() => onClick(game)}
+                    className="group panel overflow-hidden cursor-pointer transition-transform hover:-translate-y-1"
+                >
+                    <div className="aspect-[4/3] w-full bg-[rgba(255,255,255,0.4)] relative">
+                        {game.thumbnail ? (
+                            <img
+                                src={game.thumbnail}
+                                alt={game.title}
+                                className="w-full h-full object-cover"
+                                loading="lazy"
+                            />
+                        ) : (
+                            <div className="w-full h-full flex items-center justify-center" style={{
+                                backgroundImage: 'linear-gradient(90deg, rgba(29,78,216,0.10) 1px, transparent 1px), linear-gradient(rgba(29,78,216,0.10) 1px, transparent 1px)',
+                                backgroundSize: '18px 18px'
+                            }}>
+                                <div className="font-pixel text-[var(--ink-soft)] text-xs">SEM_THUMB</div>
+                            </div>
+                        )}
+
+                        <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ background: 'linear-gradient(180deg, rgba(0,0,0,0) 30%, rgba(11,18,32,0.75) 100%)' }}>
+                            <div className="absolute bottom-0 left-0 right-0 p-3">
+                                <div className="font-pixel text-white text-[10px] leading-5">{game.title}</div>
+                                <div className="text-white/85 text-lg">por <span className="underline">{game.author}</span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="px-3 py-2 flex items-center justify-between border-t-2 border-[var(--border)]">
+                        <div className="text-[var(--ink-soft)] text-lg">jogadas: <span className="font-bold text-[var(--ink)]">{game.plays ?? 0}</span></div>
+                        <div className="text-[var(--ink-soft)] text-lg">curtidas: <span className="font-bold text-[var(--ink)]">{game.likes ?? 0}</span></div>
+                    </div>
+                </div>
+            );
+        };
+
+        const GamePlayer = ({ game, user, liked, onBack, onToggleLike, onAddComment, onFullscreen, onShare }) => {
+            const [newComment, setNewComment] = useState('');
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                if (!newComment.trim()) return;
+                onAddComment(game.id, {
+                    id: Date.now(),
+                    user: user?.name ?? 'GUEST',
+                    text: newComment.trim(),
+                    date: new Date().toLocaleString('pt-BR')
+                });
+                setNewComment('');
+            };
+
+            return (
+                <div className="animate-fade-in max-w-6xl mx-auto w-full">
+                    <button className="btn px-3 py-2 mb-5" onClick={onBack}>
+                        &lt; Voltar
+                    </button>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div className="lg:col-span-2 space-y-4">
+                            <div className="panel overflow-hidden">
+                                <div className="aspect-video w-full bg-black border-b-2 border-[var(--border)]">
+                                    <iframe
+                                        srcDoc={game.html}
+                                        className="w-full h-full border-0"
+                                        title={game.title}
+                                        sandbox="allow-scripts allow-modals allow-popups"
+                                    />
+                                </div>
+
+                                <div className="p-5">
+                                    <div className="flex items-start justify-between gap-4">
+                                        <div>
+                                            <h1 className="font-pixel text-[var(--ink)] text-sm md:text-base">{game.title}</h1>
+                                            <div className="text-[var(--ink-soft)] text-lg">por <span className="underline">{game.author}</span> • jogadas: <b className="text-[var(--ink)]">{game.plays ?? 0}</b></div>
+                                        </div>
+                                        <button className="btn px-3 py-2 flex items-center gap-2" onClick={() => onToggleLike(game.id)} title={liked ? 'Remover curtida' : 'Curtir'}>
+                                            <IconHeart filled={liked} />
+                                            <span className="text-lg font-bold">{game.likes ?? 0}</span>
+                                        </button>
+                                    </div>
+
+                                    <p className="mt-3 text-[var(--ink-soft)] text-xl leading-relaxed">{game.description || 'Sem descrição.'}</p>
+
+                                    <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        <button className="btn px-4 py-3 flex items-center justify-center gap-2" onClick={() => onShare(game.id)}>
+                                            <IconLink />
+                                            COPIAR LINK
+                                        </button>
+                                        <button className="btn btn-accent px-4 py-3 flex items-center justify-center gap-2" onClick={onFullscreen}>
+                                            <IconExpand />
+                                            TELA CHEIA
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="lg:col-span-1">
+                            <div className="panel p-5 h-full max-h-[640px] flex flex-col">
+                                <div className="flex items-center justify-between border-b-2 border-[var(--border)] pb-2 mb-3">
+                                    <div className="font-pixel text-[var(--ink)] text-[10px]">COMENTÁRIOS</div>
+                                    <div className="text-[var(--ink-soft)] text-lg">{(game.comments ?? []).length}</div>
+                                </div>
+
+                                <div className="flex-1 overflow-y-auto pr-2 space-y-3">
+                                    {(game.comments ?? []).length === 0 && (
+                                        <div className="text-center text-[var(--ink-soft)] text-lg border-2 border-dashed border-[var(--border)] py-6">
+                                            Seja o primeiro a comentar
+                                        </div>
+                                    )}
+
+                                    {(game.comments ?? []).map((c) => (
+                                        <div key={c.id} className="bg-white/60 border-2 border-[var(--border)] p-3">
+                                            <div className="flex items-start justify-between gap-4">
+                                                <div className="font-pixel text-[10px] text-[var(--accent)]">{c.user}</div>
+                                                <div className="text-[rgba(11,18,32,0.50)] text-sm">{c.date}</div>
+                                            </div>
+                                            <div className="text-[var(--ink)] text-xl leading-snug mt-1">{c.text}</div>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                <form onSubmit={handleSubmit} className="mt-3">
+                                    <div className="flex gap-2">
+                                        <input
+                                            className="input flex-1 px-3 py-3"
+                                            value={newComment}
+                                            onChange={(e) => setNewComment(e.target.value)}
+                                            placeholder={user ? 'Escreva um comentário...' : 'Entre para comentar'}
+                                            disabled={!user}
+                                        />
+                                        <button
+                                            className="btn px-3"
+                                            type="submit"
+                                            disabled={!user || !newComment.trim()}
+                                            title="Enviar comentário"
+                                        >
+                                            <IconSend />
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const Dashboard = ({ user, games, onPublish }) => {
+            const [title, setTitle] = useState('');
+            const [thumbnail, setThumbnail] = useState('');
+            const [description, setDescription] = useState('');
+            const [html, setHtml] = useState('');
+            const [published, setPublished] = useState(false);
+
+            const myGames = useMemo(() => games.filter(g => g.author === user.name), [games, user]);
+            const totalPlayers = useMemo(() => myGames.reduce((acc, g) => acc + (g.plays ?? 0), 0), [myGames]);
+            const publishedCount = myGames.length;
+            const avgRating = 0.0;
+
+            const handlePublish = () => {
+                if (!title.trim() || !html.trim()) return;
+                onPublish({
+                    title: title.trim(),
+                    thumbnail: thumbnail.trim(),
+                    description: description.trim(),
+                    html,
+                });
+                setTitle('');
+                setThumbnail('');
+                setDescription('');
+                setHtml('');
+                setPublished(true);
+                setTimeout(() => setPublished(false), 2200);
+            };
+
+            return (
+                <div className="max-w-5xl mx-auto w-full animate-fade-in">
+                    <div className="flex items-end justify-between gap-4 mb-4">
+                        <div>
+                            <div className="font-pixel text-[var(--ink)] text-sm">PAINEL DO CRIADOR</div>
+                            <div className="text-[var(--ink-soft)] text-lg">conectado como <b className="text-[var(--ink)]">{user.name}</b></div>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                        <div className="panel p-5">
+                            <div className="font-pixel text-[10px] text-[var(--ink-soft)] mb-1">TOTAL DE JOGADAS</div>
+                            <div className="text-4xl font-bold text-[var(--ink)]">{totalPlayers}</div>
+                        </div>
+                        <div className="panel p-5">
+                            <div className="font-pixel text-[10px] text-[var(--ink-soft)] mb-1">JOGOS PUBLICADOS</div>
+                            <div className="text-4xl font-bold text-[var(--ink)]">{publishedCount}</div>
+                        </div>
+                        <div className="panel p-5">
+                            <div className="font-pixel text-[10px] text-[var(--ink-soft)] mb-1">AVALIAÇÃO (EM BREVE)</div>
+                            <div className="text-4xl font-bold text-[var(--ink)]">{avgRating.toFixed(1)}</div>
+                        </div>
+                    </div>
+
+                    <div className="panel p-6">
+                        <div className="font-pixel text-[var(--ink)] text-[10px] mb-3">PUBLICAR UM JOGO</div>
+                        <div className="text-[var(--ink-soft)] text-lg mb-4">Cole aqui o HTML completo do seu jogo (index.html). O resto roda direto no navegador.</div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-3">
+                                <div>
+                                    <label className="font-pixel text-[10px] text-[var(--ink-soft)]">TÍTULO DO JOGO</label>
+                                    <input className="input w-full px-4 py-3" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="EX: SKY_RUNNER" />
+                                </div>
+                                <div>
+                                    <label className="font-pixel text-[10px] text-[var(--ink-soft)]">THUMBNAIL (URL OPCIONAL)</label>
+                                    <input className="input w-full px-4 py-3" value={thumbnail} onChange={(e) => setThumbnail(e.target.value)} placeholder="https://..." />
+                                </div>
+                                <div>
+                                    <label className="font-pixel text-[10px] text-[var(--ink-soft)]">DESCRIÇÃO (OPCIONAL)</label>
+                                    <input className="input w-full px-4 py-3" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Uma frase curta sobre o jogo" />
+                                </div>
+
+                                <button className="btn btn-accent w-full px-4 py-3 font-bold" onClick={handlePublish} disabled={!title.trim() || !html.trim()}>
+                                    PUBLICAR
+                                </button>
+
+                                {published && (
+                                    <div className="mt-2 border-2 border-[rgba(29,78,216,0.35)] bg-[var(--accent-soft)] p-3 text-[var(--ink)] font-bold animate-fade-in">
+                                        Publicado! Seu jogo já está no hub.
+                                    </div>
+                                )}
+
+                                <div className="text-[rgba(11,18,32,0.55)] text-lg">
+                                    Dica: pode incluir CSS/JS inline. O jogo roda em <b>iframe</b> via <code>srcDoc</code>.
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="font-pixel text-[10px] text-[var(--ink-soft)]">HTML DO JOGO (OBRIGATÓRIO)</label>
+                                <textarea className="input w-full h-72 px-4 py-3 font-mono text-sm" value={html} onChange={(e) => setHtml(e.target.value)} placeholder="<!DOCTYPE html>..." />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- App ---
+        const App = () => {
+            const [view, setView] = useState('home');
+            const [activeId, setActiveId] = useState(null);
+            const [isLoginOpen, setIsLoginOpen] = useState(false);
+            const [user, setUser] = useState(() => {
+                const raw = localStorage.getItem(STORAGE_KEYS.user);
+                return safeJsonParse(raw, null);
+            });
+
+            const [games, setGames] = useState(() => loadGames());
+            const [query, setQuery] = useState('');
+            const [likedIds, setLikedIds] = useState(() => loadLikedIds());
+            const playerBoxRef = useRef(null);
+
+            // Persist games
+            useEffect(() => {
+                saveGames(games);
+            }, [games]);
+
+            // Deep link support (?game=ID)
+            useEffect(() => {
+                const params = new URLSearchParams(window.location.search);
+                const id = params.get('game');
+                if (id) {
+                    const found = games.find(g => String(g.id) === String(id));
+                    if (found) {
+                        setActiveId(found.id);
+                        setView('game');
+                    }
+                }
+            }, []); // once
+
+            const activeGame = useMemo(() => games.find(g => g.id === activeId) ?? null, [games, activeId]);
+
+            const filteredGames = useMemo(() => {
+                const q = query.trim().toLowerCase();
+                if (!q) return games;
+                return games.filter(g =>
+                    (g.title || '').toLowerCase().includes(q) ||
+                    (g.author || '').toLowerCase().includes(q)
+                );
+            }, [games, query]);
+
+            const appPaddingStyle = useMemo(() => ({
+                paddingTop: 'calc(5rem + var(--cloud-size))',
+                paddingBottom: 'var(--cloud-size)'
+            }), []);
+
+            // Mantém usuário sincronizado com Firebase Auth (quando disponível)
+            useEffect(() => {
+                if (!firebaseReady || !firebaseAuth) return;
+                const unsub = firebaseAuth.onAuthStateChanged((u) => {
+                    if (u) {
+                        const newUser = {
+                            name: u.displayName || (u.email ? u.email.split('@')[0] : 'Usuário'),
+                            email: u.email || ''
+                        };
+                        setUser(newUser);
+                        localStorage.setItem(STORAGE_KEYS.user, JSON.stringify(newUser));
+                    } else {
+                        setUser(null);
+                        localStorage.removeItem(STORAGE_KEYS.user);
+                    }
+                });
+                return () => unsub && unsub();
+            }, []);
+
+            const handleLogin = async ({ provider, email, password } = {}) => {
+                // Se Firebase estiver disponível, tenta e-mail/senha
+                if (firebaseReady && firebaseAuth) {
+                    if (provider !== 'password') {
+                        throw new Error('Use e-mail e senha para entrar.');
+                    }
+
+                    if (!email?.trim() || !password) {
+                        throw new Error('Informe e-mail e senha.');
+                    }
+
+                    // Tenta entrar; se não existir, cria a conta
+                    try {
+                        await firebaseAuth.signInWithEmailAndPassword(email.trim(), password);
+                    } catch (e) {
+                        if (e?.code === 'auth/user-not-found') {
+                            await firebaseAuth.createUserWithEmailAndPassword(email.trim(), password);
+                        } else {
+                            throw e;
+                        }
+                    }
+
+                    setIsLoginOpen(false);
+                    return;
+                }
+
+                // Fallback (quando Firebase não estiver carregado/permitido)
+                const demoEmail = (email && String(email).trim()) ? String(email).trim() : 'user@nexus.net';
+                const demoName = demoEmail.includes('@') ? demoEmail.split('@')[0] : 'PixelDev';
+                const newUser = { name: demoName || 'PixelDev', email: demoEmail };
+                setUser(newUser);
+                localStorage.setItem(STORAGE_KEYS.user, JSON.stringify(newUser));
+                setIsLoginOpen(false);
+            };
+
+            const changeView = async (v) => {
+                if (v === 'logout') {
+                    try {
+                        if (firebaseReady && firebaseAuth) {
+                            await firebaseAuth.signOut();
+                        }
+                    } catch {
+                        // ignore
+                    }
+                    setUser(null);
+                    localStorage.removeItem(STORAGE_KEYS.user);
+                    setView('home');
+
+                    const url = new URL(window.location.href);
+                    url.searchParams.delete('game');
+                    window.history.pushState({}, '', url);
+                    return;
+                }
+
+                setView(v);
+                if (v !== 'game') {
+                    setActiveId(null);
+                    const url = new URL(window.location.href);
+                    url.searchParams.delete('game');
+                    window.history.pushState({}, '', url);
+                }
+            };
+
+            const openGame = (game) => {
+                setGames(prev => prev.map(g => {
+                    if (g.id !== game.id) return g;
+                    return { ...g, plays: (g.plays ?? 0) + 1 };
+                }));
+
+                setActiveId(game.id);
+                setView('game');
+
+                const url = new URL(window.location.href);
+                url.searchParams.set('game', game.id);
+                window.history.pushState({}, '', url);
+
+                window.scrollTo(0, 0);
+            };
+
+            const publishGame = ({ title, description, html, thumbnail }) => {
+                if (!user) return;
+                const newGame = {
+                    id: Date.now(),
+                    title,
+                    author: user.name,
+                    description: description || 'Sem descrição. Adicione uma frase no painel do criador.',
+                    html,
+                    thumbnail: thumbnail || '',
+                    plays: 0,
+                    likes: 0,
+                    comments: []
+                };
+                setGames(prev => [newGame, ...prev]);
+                changeView('home');
+            };
+
+            const toggleLike = (gameId) => {
+                const next = new Set(likedIds);
+                const isLiked = next.has(gameId);
+                if (isLiked) next.delete(gameId); else next.add(gameId);
+                setLikedIds(next);
+                saveLikedIds(next);
+
+                setGames(prev => prev.map(g => {
+                    if (g.id !== gameId) return g;
+                    const likes = g.likes ?? 0;
+                    return { ...g, likes: Math.max(0, likes + (isLiked ? -1 : 1)) };
+                }));
+            };
+
+            const addComment = (gameId, comment) => {
+                setGames(prev => prev.map(g => {
+                    if (g.id !== gameId) return g;
+                    const list = Array.isArray(g.comments) ? g.comments : [];
+                    return { ...g, comments: [comment, ...list] };
+                }));
+            };
+
+            const shareGame = async (gameId) => {
+                const url = new URL(window.location.href);
+                url.searchParams.set('game', gameId);
+                const text = url.toString();
+
+                try {
+                    await navigator.clipboard.writeText(text);
+                    alert('Link copiado para a área de transferência.');
+                } catch {
+                    prompt('Copie o link:', text);
+                }
+            };
+
+            const fullscreen = async () => {
+                const el = playerBoxRef.current;
+                if (!el) return;
+                try {
+                    if (document.fullscreenElement) {
+                        await document.exitFullscreen();
+                    } else {
+                        await el.requestFullscreen();
+                    }
+                } catch {
+                    // ignore
+                }
+            };
+
+            return (
+                <div className="min-h-screen flex flex-col" style={appPaddingStyle}>
+                    <Header
+                        user={user}
+                        onLoginClick={() => setIsLoginOpen(true)}
+                        onChangeView={changeView}
+                    />
+
+                    <main className="flex-1 w-full py-8 flex justify-center relative z-10 safe-x">
+                        {view === 'home' && (
+                            <div className="w-full max-w-7xl animate-fade-in">
+                                <div className="mb-4">
+                                    <div className="font-pixel text-[var(--ink)] text-sm md:text-base">NexusHUB o local para o Seu HTML!</div>
+                                    <div className="text-[var(--ink-soft)] text-xl">Seu hub para jogos HTML5, direto no navegador.</div>
+                                </div>
+
+                                <div className="max-w-2xl mb-7">
+                                    <div className="panel px-4 py-3 flex items-center gap-3">
+                                        <div className="text-[var(--ink-soft)]"><IconSearch /></div>
+                                        <input
+                                            className="bg-transparent w-full text-xl outline-none"
+                                            value={query}
+                                            onChange={(e) => setQuery(e.target.value)}
+                                            placeholder="Buscar por jogo ou autor..."
+                                        />
+                                    </div>
+                                </div>
+
+                                {games.length === 0 ? (
+                                    <div className="panel p-10 text-center">
+                                        <div className="font-pixel text-[var(--ink)] text-sm mb-2">NENHUM JOGO AINDA</div>
+                                        <div className="text-[var(--ink-soft)] text-xl">Publique o primeiro jogo e comece a vitrine.</div>
+                                        <button
+                                            className="btn btn-accent mt-5 px-5 py-3 font-bold"
+                                            onClick={() => user ? changeView('dashboard') : setIsLoginOpen(true)}
+                                        >
+                                            PUBLICAR UM JOGO
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <div className="flex items-center justify-between gap-4 mb-4">
+                                            <div className="text-[var(--ink-soft)] text-lg">Exibindo <b className="text-[var(--ink)]">{filteredGames.length}</b> jogo(s)</div>
+                                            <button className="btn px-4 py-2" onClick={() => user ? changeView('dashboard') : setIsLoginOpen(true)}>
+                                                + Novo jogo
+                                            </button>
+                                        </div>
+
+                                        {filteredGames.length === 0 ? (
+                                            <div className="panel p-10 text-center">
+                                                <div className="font-pixel text-[var(--ink)] text-sm mb-2">NADA POR AQUI</div>
+                                                <div className="text-[var(--ink-soft)] text-xl">Tente outro termo na busca.</div>
+                                            </div>
+                                        ) : (
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                                                {filteredGames.map((g) => (
+                                                    <GameCard key={g.id} game={g} onClick={openGame} />
+                                                ))}
+                                            </div>
+                                        )}
+                                    </>
+                                )}
+                            </div>
+                        )}
+
+                        {view === 'game' && activeGame && (
+                            <div ref={playerBoxRef} className="w-full">
+                                <GamePlayer
+                                    game={activeGame}
+                                    user={user}
+                                    liked={likedIds.has(activeGame.id)}
+                                    onBack={() => changeView('home')}
+                                    onToggleLike={toggleLike}
+                                    onAddComment={addComment}
+                                    onFullscreen={fullscreen}
+                                    onShare={shareGame}
+                                />
+                            </div>
+                        )}
+
+                        {view === 'dashboard' && user && (
+                            <Dashboard user={user} games={games} onPublish={publishGame} />
+                        )}
+
+                        {view === 'dashboard' && !user && (
+                            <div className="panel p-10 text-center max-w-xl w-full animate-fade-in">
+                                <div className="font-pixel text-[var(--ink)] text-sm mb-2">ACESSO NEGADO</div>
+                                <div className="text-[var(--ink-soft)] text-xl">Entre para publicar seus jogos.</div>
+                                <button className="btn btn-accent mt-5 px-5 py-3 font-bold" onClick={() => setIsLoginOpen(true)}>
+                                    ENTRAR
+                                </button>
+                            </div>
+                        )}
+                    </main>
+
+                    <footer className="safe-x pb-[var(--cloud-size)]">
+                        <div className="panel panel-strong px-6 py-5 text-center">
+                            <div className="font-pixel text-[10px] text-[var(--ink)]">NEXUSHUB</div>
+                            <div className="text-[var(--ink-soft)] text-lg">© 2026 — Gatinho guloso/Miko</div>
+                        </div>
+                    </footer>
+
+                    <AuthModal
+                        isOpen={isLoginOpen}
+                        onClose={() => setIsLoginOpen(false)}
+                        onLogin={handleLogin}
+                    />
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
