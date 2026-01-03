@@ -762,7 +762,7 @@
                 </button>
                 <div class="flex items-center gap-4">
                     <h2 id="current-game-title" class="text-xl font-bold gradient-text">Jogo</h2>
-                    <span class="tag-pill">HTML5</span>
+                    <!-- tag removed -->
                 </div>
                 <div class="flex items-center gap-4">
                     <button id="fullscreen-btn" onclick="toggleFullscreen()" class="btn-secondary px-4 py-2 text-sm">
@@ -954,6 +954,20 @@
                 </div>
 
                 <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Formato do Jogo</label>
+                    <div class="flex gap-4 mb-4 p-3 glass-card rounded-xl">
+                        <label class="flex items-center gap-2 cursor-pointer hover:text-white transition-colors">
+                            <input type="radio" name="game-type" value="html" checked onchange="toggleGameType('html')" class="accent-indigo-500 w-4 h-4">
+                            <span>Código HTML</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer hover:text-white transition-colors">
+                            <input type="radio" name="game-type" value="url" onchange="toggleGameType('url')" class="accent-indigo-500 w-4 h-4">
+                            <span>URL Externa / Embed</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div id="type-html-container">
                     <label class="block text-sm font-medium text-gray-300 mb-2">Código HTML do Jogo</label>
                     <textarea id="game-html-input" class="code-editor" rows="12" placeholder="<!DOCTYPE html>
 <html>
@@ -970,6 +984,12 @@
 </body>
 </html>"></textarea>
                     <p class="text-xs text-gray-500 mt-2">💡 Cole um documento HTML completo com seu jogo. Ele será executado em um iframe seguro.</p>
+                </div>
+
+                <div id="type-url-container" class="hidden">
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Link do Jogo (URL)</label>
+                    <input type="url" id="game-url-input" class="input-field" placeholder="https://itch.io/embed-game/...">
+                    <p class="text-xs text-gray-500 mt-2">💡 Use links que permitem incorporação (iframe). Ex: Scratch, itch.io, etc.</p>
                 </div>
 
                 <button id="publish-submit-btn" onclick="handlePublishGame()" class="btn-primary w-full py-4 text-lg mt-4">
@@ -1028,6 +1048,17 @@
             }
         };
 
+        // Toggle Game Type in Publish Modal
+        window.toggleGameType = (type) => {
+            if (type === 'html') {
+                document.getElementById('type-html-container').classList.remove('hidden');
+                document.getElementById('type-url-container').classList.add('hidden');
+            } else {
+                document.getElementById('type-html-container').classList.add('hidden');
+                document.getElementById('type-url-container').classList.remove('hidden');
+            }
+        };
+
         // Modal Controls
         window.openLoginModal = () => {
             document.getElementById('register-modal').classList.add('hidden');
@@ -1074,9 +1105,21 @@
                 
                 document.getElementById('game-title-input').value = game.title;
                 document.getElementById('game-desc-input').value = game.description;
-                document.getElementById('game-html-input').value = game.html;
                 document.getElementById('game-image-input').value = game.thumbnail || '';
                 document.getElementById('game-platform-input').value = game.platform || 'both';
+
+                // Handle format types
+                if (game.type === 'url') {
+                    document.querySelector('input[name="game-type"][value="url"]').checked = true;
+                    toggleGameType('url');
+                    document.getElementById('game-url-input').value = game.url || '';
+                    document.getElementById('game-html-input').value = '';
+                } else {
+                    document.querySelector('input[name="game-type"][value="html"]').checked = true;
+                    toggleGameType('html');
+                    document.getElementById('game-html-input').value = game.html || '';
+                    document.getElementById('game-url-input').value = '';
+                }
             } else {
                 // Create Mode
                 editingGameId = null;
@@ -1086,8 +1129,13 @@
                 document.getElementById('game-title-input').value = '';
                 document.getElementById('game-desc-input').value = '';
                 document.getElementById('game-html-input').value = '';
+                document.getElementById('game-url-input').value = '';
                 document.getElementById('game-image-input').value = '';
                 document.getElementById('game-platform-input').value = 'both';
+                
+                // Reset to HTML default
+                document.querySelector('input[name="game-type"][value="html"]').checked = true;
+                toggleGameType('html');
             }
             
             modal.classList.remove('hidden');
@@ -1321,40 +1369,51 @@
             if (!currentUser) return;
             const title = document.getElementById('game-title-input').value.trim();
             const desc = document.getElementById('game-desc-input').value.trim();
-            const html = document.getElementById('game-html-input').value.trim();
             const thumbnail = document.getElementById('game-image-input').value.trim();
             const platform = document.getElementById('game-platform-input').value;
+            
+            // Type logic
+            const type = document.querySelector('input[name="game-type"]:checked').value;
+            const html = document.getElementById('game-html-input').value.trim();
+            const url = document.getElementById('game-url-input').value.trim();
 
             if (!title) return alert("Digite o nome do jogo!");
-            if (!html) return alert("Cole o código HTML do jogo!");
+            
+            if (type === 'html' && !html) return alert("Cole o código HTML do jogo!");
+            if (type === 'url' && !url) return alert("Cole a URL do jogo!");
 
             const authorName = currentUser.displayName || currentUser.email.split('@')[0];
             
+            const gameData = {
+                title,
+                description: desc || "Sem descrição",
+                thumbnail: thumbnail || null,
+                platform,
+                type: type // 'html' or 'url'
+            };
+
+            if (type === 'html') {
+                gameData.html = html;
+                gameData.url = null;
+            } else {
+                gameData.url = url;
+                gameData.html = null;
+            }
+            
             if (editingGameId) {
                 // Update existing game
-                update(ref(db, 'games/' + editingGameId), {
-                    title,
-                    html,
-                    description: desc || "Sem descrição",
-                    thumbnail: thumbnail || null,
-                    platform
-                }).then(() => {
+                update(ref(db, 'games/' + editingGameId), gameData).then(() => {
                     closePublishModal();
                     alert("Jogo atualizado com sucesso! ✨");
                 }).catch(e => alert("Erro ao atualizar: " + e.message));
             } else {
                 // Create new game
-                push(ref(db, 'games'), {
-                    title,
-                    html,
-                    description: desc || "Sem descrição",
-                    author: authorName,
-                    userId: currentUser.uid,
-                    authorPhoto: currentPhotoURL || null, // Use the robust variable
-                    thumbnail: thumbnail || null,
-                    platform,
-                    timestamp: Date.now()
-                }).then(() => {
+                gameData.author = authorName;
+                gameData.userId = currentUser.uid;
+                gameData.authorPhoto = currentPhotoURL || null;
+                gameData.timestamp = Date.now();
+
+                push(ref(db, 'games'), gameData).then(() => {
                     closePublishModal();
                     alert("Jogo publicado com sucesso! 🎮");
                 }).catch(e => alert("Erro ao publicar: " + e.message));
@@ -1424,7 +1483,7 @@
                             
                             <div onclick="playGame('${key}')" class="cursor-pointer">
                                 <div class="flex gap-2 mb-2">
-                                    <span class="tag-pill bg-black/40 backdrop-blur-sm border border-white/10">HTML5</span>
+                                    <span class="tag-pill bg-black/40 backdrop-blur-sm border border-white/10">${game.type === 'url' ? 'Link/Embed' : 'HTML5'}</span>
                                     <span class="tag-pill bg-black/40 backdrop-blur-sm border border-white/10" title="Plataforma">${platformIcon}</span>
                                 </div>
                                 <h4 class="text-xl font-bold mb-1 shadow-black drop-shadow-lg">${game.title}</h4>
@@ -1462,11 +1521,26 @@
             const container = document.getElementById('game-container');
             container.innerHTML = '';
 
-            // Create iframe and load HTML
+            // Create iframe
             const iframe = document.createElement('iframe');
             iframe.className = 'game-frame';
-            iframe.setAttribute('sandbox', 'allow-scripts allow-pointer-lock');
-            iframe.srcdoc = game.html;
+            // Relaxed sandbox rules to support engines (Construct, Godot, etc.) needing localStorage/Forms
+            iframe.setAttribute('sandbox', 'allow-scripts allow-pointer-lock allow-same-origin allow-forms allow-popups allow-modals');
+            
+            if (game.type === 'url' && game.url) {
+                // Handle External URL
+                iframe.src = game.url;
+            } else {
+                // Handle HTML Content
+                try {
+                    const blob = new Blob([game.html], { type: 'text/html;charset=UTF-8' });
+                    iframe.src = URL.createObjectURL(blob);
+                } catch (e) {
+                    console.error("Blob creation failed, falling back to srcdoc", e);
+                    iframe.srcdoc = game.html;
+                }
+            }
+
             container.appendChild(iframe);
 
             // Focus iframe for keyboard input
